@@ -2,7 +2,7 @@
 
 A scalable flash-sale system built with NestJS, GraphQL, React, TypeScript, PostgreSQL, Redis, Playwright, and k6.
 
-> **EPIC-01 (in progress):** Monorepo foundation — shared TypeScript/ESLint config and Turborepo workspace. Apps, Docker, GraphQL, hooks, and CI land in follow-up PRs.
+> **EPIC-01 (in progress):** Monorepo foundation plus NestJS API and React/Vite web scaffolds. Docker, Prisma, GraphQL, quality hooks, and CI land in follow-up PRs.
 
 ## Requirements
 
@@ -12,27 +12,39 @@ A scalable flash-sale system built with NestJS, GraphQL, React, TypeScript, Post
 ## Setup
 
 ```bash
+cp .env.example .env
 pnpm install
 ```
 
 ## Scripts
 
-| Command                             | Description              |
-| ----------------------------------- | ------------------------ |
-| `pnpm build`                        | Build workspace packages |
-| `pnpm typecheck`                    | Typecheck the workspace  |
-| `pnpm lint`                         | Lint the workspace       |
-| `pnpm test`                         | Run tests                |
-| `pnpm format` / `pnpm format:check` | Prettier format / check  |
+| Command                             | Description                   |
+| ----------------------------------- | ----------------------------- |
+| `pnpm dev`                          | Start API + web via Turborepo |
+| `pnpm --filter api dev`             | NestJS API (watch)            |
+| `pnpm --filter web dev`             | Vite web                      |
+| `pnpm build`                        | Build all packages/apps       |
+| `pnpm typecheck`                    | Typecheck the workspace       |
+| `pnpm lint`                         | Lint the workspace            |
+| `pnpm test`                         | Run tests                     |
+| `pnpm format` / `pnpm format:check` | Prettier format / check       |
 
 ## Workspace layout
 
 ```text
+apps/
+  api/          # NestJS (health REST scaffold)
+  web/          # React + Vite
 packages/
   typescript-config/
   eslint-config/
   types/        # @flash-sale/types (non-domain contracts only)
 ```
+
+## Local endpoints
+
+- API liveness: `GET http://localhost:3000/health`
+- Web: `http://localhost:5173`
 
 ## Architecture note
 
