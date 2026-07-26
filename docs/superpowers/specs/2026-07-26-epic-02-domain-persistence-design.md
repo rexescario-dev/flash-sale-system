@@ -1,13 +1,13 @@
 # EPIC-02 — Flash Sale Domain & Persistence (Design Spec)
 
-**Status:** Approved (#13 Purchase contract finalized)
-**Date:** 2026-07-26 (updated 2026-07-27 for #13)
+**Status:** Draft (#14 sale-status contract — pending review)
+**Date:** 2026-07-26 (updated 2026-07-27 for #14)
 **Epic:** [EPIC-02 #82](https://github.com/rexescario-dev/flash-sale-system/issues/82)
-**Next implementation ticket:** [#13 — Define Purchase domain model](https://github.com/rexescario-dev/flash-sale-system/issues/13)
-**Completed detailed contracts:** [#11 — FlashSale](https://github.com/rexescario-dev/flash-sale-system/issues/11) (merged via PR #98), [#12 — Product](https://github.com/rexescario-dev/flash-sale-system/issues/12) (merged via PR #99)
+**Next implementation ticket:** [#14 — Implement sale status rules](https://github.com/rexescario-dev/flash-sale-system/issues/14)
+**Completed detailed contracts:** [#11 — FlashSale](https://github.com/rexescario-dev/flash-sale-system/issues/11) (merged via PR #98), [#12 — Product](https://github.com/rexescario-dev/flash-sale-system/issues/12) (merged via PR #99), [#13 — Purchase](https://github.com/rexescario-dev/flash-sale-system/issues/13) (merged via PR #100)
 **Child issues:** #11–#20
 **Repository:** `rexescario-dev/flash-sale-system`
-**Depends on:** EPIC-01 (#81), #11, and #12 merged to `main`
+**Depends on:** EPIC-01 (#81), #11, #12, and #13 merged to `main`
 
 ## Goal
 
@@ -28,15 +28,16 @@ Share intentional domain concepts in `@flash-sale/domain`. Keep Prisma, NestJS, 
 | Shared types          | `@flash-sale/types` remains non-domain (transport/contracts only when both apps need them)                                                              |
 | Prisma                | Stays in `apps/api`; schema/migrations/client local to the API                                                                                          |
 | Mapping               | Prisma ↔ domain mapping lives outside `@flash-sale/domain`                                                                                              |
-| Repository ports      | **No repository-port location is locked by this design.** Deferred to #17–#18; not introduced in #11/#12/#13                                            |
+| Repository ports      | **No repository-port location is locked by this design.** Deferred to #17–#18; not introduced in #11–#14                                                |
 | Repository adapters   | Prisma implementations always in `apps/api`                                                                                                             |
 | GraphQL purchase APIs | Out of EPIC-02; deferred to EPIC-03                                                                                                                     |
 | Redis client          | Out of EPIC-02; deferred to EPIC-04 (Compose service already exists)                                                                                    |
 | #11 modeling style    | Rich `FlashSale` class with private state, `create` / `reconstitute`, getters                                                                           |
 | #12 modeling style    | Rich `Product` class with private state, **`create` only**, getters; mirrors #11 without premature shared helpers                                       |
 | #13 modeling style    | Rich `Purchase` class with private state, **`create` only**, getters; IDs preserved (no trim); defensive `purchasedAt`                                  |
-| Value objects         | Not introduced in #11/#12/#13 (`SaleWindow`, `Stock` deferred until justified)                                                                          |
-| Spec shape            | EPIC-02 umbrella architecture + detailed #11, #12, and #13 contracts                                                                                    |
+| #14 status style      | Instance method `FlashSale.getStatus(nowUtc)`; string-union `FlashSaleStatus`; temporal-first precedence; no purchase-gate helpers                      |
+| Value objects         | Not introduced in #11–#14 (`SaleWindow`, `Stock` deferred until justified)                                                                              |
+| Spec shape            | EPIC-02 umbrella architecture + detailed #11, #12, #13, and #14 contracts                                                                               |
 
 ## Dependency direction
 
@@ -81,7 +82,7 @@ Domain entities do not know Prisma. Mapping is always outside `@flash-sale/domai
 
 ### Repository ports (#17–#18)
 
-Repository ports are **not** part of #11, #12, or #13.
+Repository ports are **not** part of #11, #12, #13, or #14.
 
 **No repository-port location is locked by EPIC-02 design yet. This decision belongs to #17–#18.**
 
@@ -105,8 +106,15 @@ They may later be defined in the application layer (`apps/api`) or, if required 
 Intended implementation sequence after domain models:
 
 ```text
-#13 Purchase domain model
-      ↓
+#11 FlashSale
+      │
+      ├── sale-window invariant (create / reconstitute)
+      │
+      └── #14 derived status (getStatus)   ← next
+               │
+#12 Product    │
+#13 Purchase   │
+               ▼
 #15 Persistence schema (FlashSale / Product / Purchase)
       ↓
 #16 Purchase uniqueness constraint UNIQUE(flash_sale_id, user_id)
@@ -117,16 +125,20 @@ Intended implementation sequence after domain models:
       ↓
 #19 Atomic stock reservation
       ↓
-#20 Transactional purchase flow (business outcome ALREADY_PURCHASED) + concurrency tests
+#20 Transactional purchase flow
+      ├── status / purchase eligibility (uses getStatus; no purchase-gate helpers in #14)
+      ├── ALREADY_PURCHASED
+      ├── reservation
+      └── concurrency safety
 ```
 
 Notes:
 
 - The uniqueness constraint is specifically on **Purchase**: `UNIQUE(flash_sale_id, user_id)`. It prevents duplicate purchases; it does **not** by itself make stock reservation concurrency-safe. Atomic reservation and oversell protection are owned by #19–#20.
-- Exact implementation details for #14–#20 are deferred until those tickets are planned; ownership boundaries above should not need rediscovery. The detailed `#13` contract is below.
-- **ID normalization debt (not #13):** `#11` `FlashSale` and `#13` `Purchase` **preserve** non-trimmed IDs; `#12` `Product` **trims** `id` / `name` / provided `description`. The three ID policies are **not** globally consistent today. `Purchase.flashSaleId` preserves the supplied value because `FlashSale.id` currently preserves its supplied value — `#13` does **not** introduce a new cross-entity normalization policy. Align branded identity rules in a separate ticket. Do **not** modify `FlashSale` ID normalization in #13.
+- Exact implementation details for #15–#20 are deferred until those tickets are planned; ownership boundaries above should not need rediscovery. The detailed `#14` contract is below (`#11`–`#13` contracts remain above/earlier in this file).
+- **Temporary identity-normalization inconsistency:** `#11` `FlashSale` and `#13` `Purchase` **preserve** non-trimmed IDs; `#12` `Product` **trims** `id` / `name` / provided `description`. This is an **acknowledged cross-entity inconsistency, not a desired domain convention**. Until a dedicated identity-normalization ticket resolves it, each entity must preserve its existing contract. New tickets must **not** silently normalize or de-normalize IDs for consistency — including `#14` (do not modify `FlashSale` ID normalization).
 
-## Target package tree (after #13)
+## Target package tree (after #14)
 
 ```text
 packages/
@@ -139,9 +151,10 @@ packages/
       ids.ts                      # compile-time brands only (no runtime ID VOs):
                                   #   FlashSaleId, ProductId, PurchaseId, UserId
       flash-sale/
-        flash-sale.ts
-        flash-sale.errors.ts
-        flash-sale.spec.ts
+        flash-sale.ts             # entity; FlashSaleStatus type (top-level); getStatus(#14)
+        flash-sale.errors.ts      # includes INVALID_NOW (#14)
+        flash-sale.spec.ts        # create/reconstitute + getStatus coverage
+                                  # (no flash-sale.status.ts)
       product/
         product.ts
         product.errors.ts
@@ -155,7 +168,7 @@ packages/
   eslint-config/
 ```
 
-`ids.ts` is the single source of truth for branded ID types. `index.ts` re-exports all four. Entity contracts below only state which IDs they use.
+`ids.ts` is the single source of truth for branded ID types. `index.ts` re-exports all four. Entity contracts below only state which IDs they use. `#14` does **not** add a new package folder; status lives on `FlashSale`.
 
 ## #11 — FlashSale domain model (detailed contract)
 
@@ -190,7 +203,7 @@ No `createdAt` on the domain entity (persistence/audit metadata, not a core inva
 
 ### Timestamp semantics
 
-`startsAt` and `endsAt` are JavaScript `Date` instances representing absolute instants. The domain compares UTC timestamps via `Date#getTime()`. Timezone formatting and parsing are outside the domain.
+`startsAt` and `endsAt` are JavaScript `Date` instances representing absolute instants. The domain compares absolute instants via `Date#getTime()` (epoch milliseconds). Timezone parsing and formatting are outside the domain.
 
 For #11, the sale-window invariant is:
 
@@ -200,7 +213,7 @@ startsAt.getTime() < endsAt.getTime();
 
 Invalid `Date` instances yield `NaN` from `getTime()`, so the comparison fails and they are rejected as `INVALID_SALE_WINDOW`. That behavior is intentional.
 
-#14 will define status boundaries against the same instant semantics.
+#14 will define status boundaries against the same absolute-instant semantics.
 
 ### Factories
 
@@ -482,29 +495,6 @@ Required coverage for `Product.create()`:
 - No unrelated changes (including no `FlashSale` edits)
 - If commits are authorized, commit messages follow `<type>: <MESSAGE>` (no `Co-authored-by`)
 
-## Pre-implementation sequencing (#12)
-
-```text
-origin/main (EPIC-01 + #11 merged)
-    → sync local checkout
-    → finalize this umbrella spec with #12 contract
-    → implement #12 on a feature branch
-    → run package + workspace quality gates
-    → commit: <type>: <MESSAGE>
-```
-
-## Explicitly out of scope for #12 delivery
-
-See the **Explicitly out of #12** table in the #12 contract above. In summary:
-
-- Persistence / Prisma
-- Repository ports/adapters
-- FlashSale changes (including ID-normalization alignment and any #11 Date-input test backfill)
-- Purchase model / purchase flow
-- Sale status rules
-- GraphQL (EPIC-03)
-- Redis (EPIC-04)
-
 ## #13 — Purchase domain model (detailed contract)
 
 ### Issue acceptance criteria
@@ -700,27 +690,214 @@ Required coverage for `Purchase.create()`:
 - No unrelated changes (do not edit `FlashSale` / `Product` entity files; add brands only in `ids.ts` + public exports in `index.ts`)
 - If commits are authorized, commit messages follow `<type>: <MESSAGE>` (no `Co-authored-by`)
 
-## Pre-implementation sequencing (#13)
+## #14 — Implement sale status rules (detailed contract)
+
+### Issue acceptance criteria
+
+From GitHub [#14](https://github.com/rexescario-dev/flash-sale-system/issues/14):
+
+- Status resolves to `UPCOMING`, `ACTIVE`, `SOLD_OUT`, `ENDED` using UTC
+- Unit tests cover all status transitions
+
+Issue AC language may say “UTC”; the detailed contract below clarifies that the domain compares **absolute instants** (epoch milliseconds) and performs **no timezone conversion**.
+
+For `#14`, “all status transitions” means all **observable status outcomes and temporal/inventory boundaries** of `getStatus(nowUtc)`. It does **not** require implementing or testing state mutation between statuses; stock mutation is owned by `#19`–`#20`.
+
+### Design interpretation for #14
+
+- Add status resolution as **instance behavior** on the existing `FlashSale` entity in `@flash-sale/domain`.
+- **Status is derived, not persisted.** Persisted / reconstituted fields remain `startsAt`, `endsAt`, `totalStock`, and `remainingStock` (plus ids). `#14` does **not** add a `status` field on the entity or in later persistence work under this ticket. Time passing and stock changes naturally change the result of `getStatus(now)` without a duplicated status column or in-memory status mutation.
+- Declare `FlashSaleStatus` as a top-level exported type in `flash-sale.ts` (same file as the entity). Do **not** add `flash-sale.status.ts` or another status module.
+- Canonical status vocabulary (no aliases such as `NOT_STARTED`):
+
+```ts
+type FlashSaleStatus = 'ACTIVE' | 'ENDED' | 'SOLD_OUT' | 'UPCOMING';
+```
+
+Union members are listed A→Z for ESLint perfectionist sorting. **Runtime precedence is not alphabetical** (see below).
+
+- Public API is only:
+
+```ts
+flashSale.getStatus(nowUtc: Date): FlashSaleStatus;
+```
+
+- **Do not** add purchase-gate helpers (`isPurchaseOpen`, `assertPurchaseOpen`, `canPurchase`, etc.). Callers that need a simple open check may derive `getStatus(nowUtc) === 'ACTIVE'`. Purchase eligibility policy belongs to `#20` (or a later application/domain layer) and may eventually depend on more than status alone.
+- **Do not** introduce stock mutation / reserve APIs in `#14`.
+- Preserve existing `FlashSale` ID contract (see umbrella note on temporary identity-normalization inconsistency); do not change ID normalization in `#14`.
+- Domain remains free of NestJS/Prisma/Redis and has **no runtime package dependencies**.
+- Approach: keep logic inside `FlashSale` (reads private `startsAt` / `endsAt` / `remainingStock`). Do **not** extract a free-function resolver or status policy engine in `#14`.
+
+### Instant semantics (`nowUtc` naming)
+
+`nowUtc`, `startsAt`, and `endsAt` are JavaScript `Date` instances representing absolute instants. The domain compares epoch milliseconds via `Date#getTime()`. No timezone conversion occurs inside the domain — same absolute-instant model as `#11`.
+
+`nowUtc` represents the current absolute instant. The name follows the umbrella / issue wording; `Date#getTime()` provides timezone-independent comparison. Callers may construct equivalent instants with any offset (e.g. `…T10:00:00+08:00` vs `…T02:00:00Z`); both compare equal when they denote the same epoch millisecond.
+
+Sale window for `ACTIVE` / `SOLD_OUT` is half-open: **`[startsAt, endsAt)`**.
+
+`getStatus()` relies on the `FlashSale` entity invariant that `startsAt` and `endsAt` are valid instants and `startsAt.getTime() < endsAt.getTime()`; these are guaranteed by `create()` / `reconstitute()` and are **not** revalidated by `#14`.
+
+### Status precedence
+
+> **Status precedence is temporal first, inventory second.** Once `now >= endsAt`, the flash sale is `ENDED`; `SOLD_OUT` is only returned when the sale is currently within its active window and `remainingStock === 0`.
+
+Ordered rules (first match wins):
+
+1. Invalid `nowUtc` (`Number.isNaN(nowUtc.getTime())`) → throw `FlashSaleValidationError` with code `INVALID_NOW`
+2. `nowUtc.getTime() < startsAt.getTime()` → `UPCOMING`
+3. `nowUtc.getTime() >= endsAt.getTime()` → `ENDED`
+4. `remainingStock === 0` → `SOLD_OUT`
+5. Otherwise → `ACTIVE`
+
+Implications:
+
+| Scenario                                       | Status     |
+| ---------------------------------------------- | ---------- |
+| Before `startsAt`, any stock including zero    | `UPCOMING` |
+| `now === startsAt`, stock `> 0`                | `ACTIVE`   |
+| `now === startsAt`, stock `=== 0`              | `SOLD_OUT` |
+| Inside window, stock `> 0`                     | `ACTIVE`   |
+| Inside window, stock `=== 0`                   | `SOLD_OUT` |
+| `now === endsAt`, any stock                    | `ENDED`    |
+| After `endsAt`, stock `=== 0`                  | `ENDED`    |
+| After `endsAt`, stock `> 0`                    | `ENDED`    |
+| Invalid `nowUtc` (`new Date('invalid')`, etc.) | throw      |
+
+`SOLD_OUT` describes an inventory state that prevents further purchases **during the open sale window**. `ENDED` describes a sale window that is no longer open **regardless of inventory**.
+
+Because `getStatus` is a pure resolver over current entity fields + `nowUtc`, a change such as “ACTIVE → SOLD_OUT” appears when the same sale is queried again with different `remainingStock` (future stock APIs) or at a different `nowUtc` — `#14` does not mutate stock.
+
+### Method contract
+
+```ts
+getStatus(nowUtc: Date): FlashSaleStatus {
+  if (Number.isNaN(nowUtc.getTime())) {
+    throw new FlashSaleValidationError(
+      'INVALID_NOW',
+      'FlashSale nowUtc must be a valid Date',
+    );
+  }
+
+  if (nowUtc.getTime() < this.startsAt.getTime()) {
+    return 'UPCOMING';
+  }
+
+  if (nowUtc.getTime() >= this.endsAt.getTime()) {
+    return 'ENDED';
+  }
+
+  if (this.remainingStock === 0) {
+    return 'SOLD_OUT';
+  }
+
+  return 'ACTIVE';
+}
+```
+
+Behavioral contract:
+
+- `getStatus()` is a **pure read** operation. It does **not** mutate `FlashSale` state, including `remainingStock`, timestamps, ids, or any other entity field. It does not assign or cache a status on the entity.
+- Runtime validation of `nowUtc` is `Number.isNaN(nowUtc.getTime())` → `INVALID_NOW`. Do **not** add `instanceof Date` (or similar) checks unless the package later adopts a broader defensive runtime-typing convention. The TypeScript parameter type is `Date`.
+
+Notes:
+
+- Prefer `getTime()` comparisons (as above) rather than relying on `Date` relational operators alone, for consistency with `#11` window validation.
+- `getStatus` only **reads** `nowUtc.getTime()`; it does not store `nowUtc` and does not need a defensive copy of the argument.
+- Illustrative error message may evolve; consumers branch on `code`, not message text.
+
+### Domain errors (#14 delta)
+
+Extend the existing `#11` error union (keep members sorted A→Z):
+
+```ts
+type FlashSaleValidationErrorCode =
+  | 'EMPTY_ID'
+  | 'EMPTY_PRODUCT_ID'
+  | 'INVALID_NOW'
+  | 'INVALID_REMAINING_STOCK'
+  | 'INVALID_SALE_WINDOW'
+  | 'INVALID_TOTAL_STOCK'
+  | 'REMAINING_STOCK_EXCEEDS_TOTAL';
+```
+
+`FlashSaleValidationError` class shape is unchanged. `#14` does **not** introduce a separate status-error type.
+
+### Public API surface (#14 delta)
+
+Export from `packages/domain/src/index.ts` (in addition to existing FlashSale exports):
+
+- `FlashSaleStatus` (type)
+
+Retain existing exports of `FlashSale`, `FlashSaleCreateProps`, `FlashSaleReconstituteProps`, `FlashSaleValidationError`, and `FlashSaleValidationErrorCode` (now including `INVALID_NOW`).
+
+Do not export purchase-gate helpers, status aliases, or branding constructors.
+
+### Explicitly out of #14
+
+| Concern                                      | Owner                          |
+| -------------------------------------------- | ------------------------------ |
+| Purchase-gate helpers / eligibility policy   | #20 (or later)                 |
+| Stock mutation / reserve / purchase          | #19–#20                        |
+| Purchase uniqueness / `ALREADY_PURCHASED`    | #16 / #18 / #20                |
+| FlashSale ID trim / normalization alignment  | Follow-up debt ticket          |
+| Value objects (`SaleWindow`, `Stock`)        | Deferred until justified       |
+| Prisma / Nest / Redis / GraphQL              | #15+ / later epics             |
+| Repository ports and adapters                | #17–#18                        |
+| Persisted `status` field / status column     | Not in #14 (status is derived) |
+| `instanceof Date` runtime checks on `nowUtc` | Not required                   |
+
+### Testing (#14)
+
+Jest in `@flash-sale/domain` (`.spec.ts`). Prefer adding a dedicated `describe('FlashSale.getStatus', …)` block in `flash-sale.spec.ts`. No Nest bootstrap, no database, no Redis. Assert on returned status strings and error `code`; do **not** assert exact message strings. Use explicit `nowUtc` fixtures rather than a live clock. Zero-stock cases use `FlashSale.reconstitute` (no stock mutation API in `#14`).
+
+Required matrix (time × stock → result):
+
+| Time relative to window | `remainingStock` | Result              |
+| ----------------------- | ---------------- | ------------------- |
+| Before `startsAt`       | `> 0`            | `UPCOMING`          |
+| Before `startsAt`       | `0`              | `UPCOMING`          |
+| At `startsAt`           | `> 0`            | `ACTIVE`            |
+| At `startsAt`           | `0`              | `SOLD_OUT`          |
+| During window           | `> 0`            | `ACTIVE`            |
+| During window           | `0`              | `SOLD_OUT`          |
+| At `endsAt`             | `> 0`            | `ENDED`             |
+| At `endsAt`             | `0`              | `ENDED`             |
+| After `endsAt`          | `> 0`            | `ENDED`             |
+| After `endsAt`          | `0`              | `ENDED`             |
+| Invalid `Date`          | any              | throw `INVALID_NOW` |
+
+This matrix is the authoritative reading of the issue’s “all status transitions” for `#14`: all observable outcomes and temporal/inventory boundaries of `getStatus(nowUtc)`, not mutation between statuses.
+
+### Definition of Done (#14)
+
+- Implementation complete for this issue only
+- Relevant tests added/updated and passing
+- ESLint and typecheck pass where applicable
+- No unrelated changes (no Purchase uniqueness helpers; no GraphQL; no Redis; no silent ID normalization changes)
+- If commits are authorized, commit messages follow `<type>: <MESSAGE>` (no `Co-authored-by`)
+
+## Pre-implementation sequencing (#14)
 
 ```text
-origin/main (EPIC-01 + #11 + #12 merged)
+origin/main (EPIC-01 + #11 + #12 + #13 merged)
     → sync local checkout
-    → finalize this umbrella spec with #13 contract
-    → implement #13 on a feature branch
+    → finalize this umbrella spec with #14 contract
+    → implement #14 on a feature branch
     → run package + workspace quality gates
     → commit: <type>: <MESSAGE>
 ```
 
-## Explicitly out of scope for #13 delivery
+## Explicitly out of scope for #14 delivery
 
-See the **Explicitly out of #13** table in the #13 contract above. In summary:
+See the **Explicitly out of #14** table in the #14 contract above. In summary:
 
-- Persistence / Prisma schema (#15) and uniqueness constraint (#16)
-- Repository ports (#17) / adapters (#18)
-- Uniqueness check APIs; `ALREADY_PURCHASED` outcome (#20)
-- FlashSale or Product behavior changes (including ID-normalization alignment)
-- Sale status rules (#14)
-- Atomic reservation (#19) / transactional purchase flow (#20)
+- Purchase-gate helpers / purchasability policy (#20)
+- Stock mutation / reservation (#19–#20)
+- Purchase uniqueness / `ALREADY_PURCHASED` (#16 / #18 / #20)
+- FlashSale ID normalization alignment
+- Persistence / Prisma (#15+)
+- Repository ports/adapters (#17–#18)
 - GraphQL (EPIC-03)
 - Redis (EPIC-04)
 
@@ -731,4 +908,4 @@ See the **Explicitly out of #13** table in the #13 contract above. In summary:
 - Inventory reservation is atomic and transactional
 - No overselling under concurrent load in integration tests
 
-Child acceptance criteria remain on the linked issues; this spec does not duplicate them beyond the #11, #12, and #13 contracts above.
+Child acceptance criteria remain on the linked issues; this spec does not duplicate them beyond the #11, #12, #13, and #14 contracts above.
