@@ -22,6 +22,7 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": [
+      "@apollo/protobufjs",
       "@prisma/client",
       "@prisma/engines",
       "esbuild",
