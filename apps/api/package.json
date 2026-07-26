@@ -3,18 +3,21 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "build": "nest build",
+    "build": "pnpm prisma:generate && nest build",
     "dev": "nest start --watch",
     "start": "node dist/main.js",
     "lint": "eslint \"{src,test}/**/*.ts\"",
-    "typecheck": "tsc -p tsconfig.json --noEmit --incremental false",
-    "test": "jest"
+    "typecheck": "pnpm prisma:generate && tsc -p tsconfig.json --noEmit --incremental false",
+    "test": "jest",
+    "prisma:generate": "DATABASE_URL=${DATABASE_URL:-postgresql://flash_sale:flash_sale_dev@localhost:5432/flash_sale} prisma generate",
+    "prisma:migrate": "prisma migrate dev"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.3",
     "@nestjs/config": "^4.0.2",
     "@nestjs/core": "^11.1.3",
     "@nestjs/platform-express": "^11.1.3",
+    "@prisma/client": "^6.11.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2"
   },
@@ -29,6 +32,7 @@
     "@types/node": "^22.15.32",
     "eslint": "^9.29.0",
     "jest": "^30.0.3",
+    "prisma": "^6.11.1",
     "ts-jest": "^29.4.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3",
