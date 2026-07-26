@@ -2,7 +2,7 @@
 
 A scalable flash-sale system built with NestJS, GraphQL, React, TypeScript, PostgreSQL, Redis, Playwright, and k6.
 
-> **EPIC-01 (in progress):** Monorepo, NestJS API, React/Vite web, Docker Compose, Prisma, and env validation. GraphQL, quality hooks, and CI land in follow-up PRs.
+> **EPIC-01 (in progress):** Monorepo, NestJS API, React/Vite web, Docker Compose, Prisma, and GraphQL scaffolding. Quality hooks and CI land in follow-up PRs.
 
 ## Requirements
 
@@ -36,7 +36,7 @@ pnpm --filter api prisma:generate
 
 ```text
 apps/
-  api/          # NestJS + Prisma (health REST scaffold)
+  api/          # NestJS + Prisma + GraphQL (code-first)
   web/          # React + Vite
 packages/
   typescript-config/
@@ -47,6 +47,7 @@ packages/
 ## Local endpoints
 
 - API liveness: `GET http://localhost:3000/health`
+- GraphQL (dev sandbox): `http://localhost:3000/graphql` — `query { health }`
 - Web: `http://localhost:5173`
 
 ## Architecture note
