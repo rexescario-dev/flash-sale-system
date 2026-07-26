@@ -1,12 +1,13 @@
 # EPIC-02 — Flash Sale Domain & Persistence (Design Spec)
 
-**Status:** Revised (awaiting approval)  
-**Date:** 2026-07-26  
+**Status:** Approved (#12 Product contract finalized)  
+**Date:** 2026-07-26 (updated 2026-07-27 for #12)  
 **Epic:** [EPIC-02 #82](https://github.com/rexescario-dev/flash-sale-system/issues/82)  
-**First implementation ticket:** [#11 — Define FlashSale domain model](https://github.com/rexescario-dev/flash-sale-system/issues/11)  
+**Next implementation ticket:** [#12 — Define Product domain model](https://github.com/rexescario-dev/flash-sale-system/issues/12)  
+**Completed detailed contracts:** [#11 — FlashSale](https://github.com/rexescario-dev/flash-sale-system/issues/11) (merged to `main` via PR #98)  
 **Child issues:** #11–#20  
 **Repository:** `rexescario-dev/flash-sale-system`  
-**Depends on:** EPIC-01 (#81) merged to `main`
+**Depends on:** EPIC-01 (#81) and #11 merged to `main`
 
 ## Goal
 
@@ -20,41 +21,49 @@ Share intentional domain concepts in `@flash-sale/domain`. Keep Prisma, NestJS, 
 
 ## Locked decisions
 
-| Area                  | Decision                                                                                                                                                       |
-| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Domain package        | `packages/domain` → `@flash-sale/domain`                                                                                                                       |
-| Domain purity         | `@flash-sale/domain` has **no runtime dependencies** in #11 (devDependencies allowed). It must also have zero NestJS/Prisma/Redis/infrastructure dependencies. |
-| Shared types          | `@flash-sale/types` remains non-domain (transport/contracts only when both apps need them)                                                                     |
-| Prisma                | Stays in `apps/api`; schema/migrations/client local to the API                                                                                                 |
-| Mapping               | Prisma ↔ domain mapping lives outside `@flash-sale/domain`                                                                                                     |
-| Repository ports      | **No repository-port location is locked by this design.** Deferred to #17–#18; not introduced in #11                                                           |
-| Repository adapters   | Prisma implementations always in `apps/api`                                                                                                                    |
-| GraphQL purchase APIs | Out of EPIC-02; deferred to EPIC-03                                                                                                                            |
-| Redis client          | Out of EPIC-02; deferred to EPIC-04 (Compose service already exists)                                                                                           |
-| #11 modeling style    | Rich `FlashSale` class with private state, `create` / `reconstitute`, getters                                                                                  |
-| Value objects         | Not introduced in #11 (`SaleWindow`, `Stock` deferred until justified)                                                                                         |
-| Spec shape            | EPIC-02 umbrella architecture + detailed #11 contract                                                                                                          |
+| Area                  | Decision                                                                                                                                                |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Domain package        | `packages/domain` → `@flash-sale/domain`                                                                                                                |
+| Domain purity         | `@flash-sale/domain` has **no runtime dependencies** (devDependencies allowed). It must also have zero NestJS/Prisma/Redis/infrastructure dependencies. |
+| Shared types          | `@flash-sale/types` remains non-domain (transport/contracts only when both apps need them)                                                              |
+| Prisma                | Stays in `apps/api`; schema/migrations/client local to the API                                                                                          |
+| Mapping               | Prisma ↔ domain mapping lives outside `@flash-sale/domain`                                                                                              |
+| Repository ports      | **No repository-port location is locked by this design.** Deferred to #17–#18; not introduced in #11/#12                                                |
+| Repository adapters   | Prisma implementations always in `apps/api`                                                                                                             |
+| GraphQL purchase APIs | Out of EPIC-02; deferred to EPIC-03                                                                                                                     |
+| Redis client          | Out of EPIC-02; deferred to EPIC-04 (Compose service already exists)                                                                                    |
+| #11 modeling style    | Rich `FlashSale` class with private state, `create` / `reconstitute`, getters                                                                           |
+| #12 modeling style    | Rich `Product` class with private state, **`create` only**, getters; mirrors #11 without premature shared helpers                                       |
+| Value objects         | Not introduced in #11/#12 (`SaleWindow`, `Stock` deferred until justified)                                                                              |
+| Spec shape            | EPIC-02 umbrella architecture + detailed #11 and #12 contracts                                                                                          |
 
 ## Dependency direction
 
 ```text
 apps/api
-  ├── @flash-sale/domain
-  ├── @flash-sale/types
+  ├── application / use cases
+  ├── mappers                              (Prisma ↔ domain; outside @flash-sale/domain)
+  ├── repository ports                     (#17–#18; location TBD)
+  ├── Prisma repository adapters           (#17–#18)
   ├── NestJS
   ├── Prisma
-  ├── Mappers
-  └── Repositories (ports + adapters; #17–#18)
-        │
+  ├── @flash-sale/types                    (non-domain transport/contracts)
+  │
+  └── depends on
         ▼
-   PostgreSQL
-
 @flash-sale/domain
-  └── ZERO runtime dependencies in #11
+  └── ZERO runtime dependencies
       ├── no NestJS
       ├── no Prisma
       └── no Redis
+
+Prisma repository adapters
+        │
+        ▼
+   PostgreSQL
 ```
+
+`@flash-sale/types` does **not** depend on `@flash-sale/domain`. The `depends on` edge is from `apps/api` → `@flash-sale/domain`.
 
 ## Persistence boundary (epic-level)
 
@@ -71,7 +80,7 @@ Domain entities do not know Prisma. Mapping is always outside `@flash-sale/domai
 
 ### Repository ports (#17–#18)
 
-Repository ports are **not** part of #11.
+Repository ports are **not** part of #11 or #12.
 
 **No repository-port location is locked by EPIC-02 design yet. This decision belongs to #17–#18.**
 
@@ -92,23 +101,28 @@ They may later be defined in the application layer (`apps/api`) or, if required 
 Notes:
 
 - The uniqueness constraint is specifically on **Purchase**: `UNIQUE(flash_sale_id, user_id)`. It prevents duplicate purchases; it does **not** by itself make stock reservation concurrency-safe. Atomic reservation and oversell protection are owned by #19–#20.
-- Exact implementation details for #12–#20 are deferred until those tickets are planned; architectural boundaries above should not need rediscovery.
+- Exact implementation details for #13–#20 are deferred until those tickets are planned; architectural boundaries above should not need rediscovery.
+- **Follow-up debt (not #12):** `#11` `FlashSale` preserves non-trimmed IDs; `#12` `Product` trims `id` / `name` / provided `description`. Align `FlashSale` ID validation/normalization in a separate ticket so branded identity rules are consistent. Do **not** modify `FlashSale` in #12.
 
-## Target package tree (after #11)
+## Target package tree (after #12)
 
 ```text
 packages/
   domain/                         # @flash-sale/domain
     package.json
     tsconfig.json
-    jest.config.cjs               # if/as needed to mirror api Jest
+    jest.config.cjs
     src/
-      index.ts
+      index.ts                    # public exports (minimal)
       ids.ts                      # FlashSaleId, ProductId (compile-time brands)
       flash-sale/
         flash-sale.ts
         flash-sale.errors.ts
-        flash-sale.spec.ts        # .spec.ts to match apps/api Jest convention
+        flash-sale.spec.ts
+      product/
+        product.ts
+        product.errors.ts
+        product.spec.ts
   types/                          # @flash-sale/types (unchanged role)
   typescript-config/
   eslint-config/
@@ -127,7 +141,7 @@ From GitHub [#11](https://github.com/rexescario-dev/flash-sale-system/issues/11)
 
 - Implement a rich `FlashSale` **entity** in `@flash-sale/domain`.
 - Do **not** introduce separate value objects (`SaleWindow`, `Stock`, etc.) in #11.
-- The issue's "entity/value objects" wording is satisfied by the `FlashSale` entity; separate `SaleWindow`/`Stock` value objects are intentionally deferred per this design.
+- The issue's "entity/value objects" wording is satisfied by the `FlashSale` entity. The domain currently has no value object whose independent invariants or behavior justify a separate abstraction. `FlashSale` owns the current invariants directly; `SaleWindow` and `Stock` remain deferred until their independent behavior warrants extraction.
 - Domain has no NestJS/Prisma/Redis dependencies and **no runtime package dependencies**.
 
 ### Entity shape
@@ -261,6 +275,7 @@ Required coverage:
 - `startsAt === endsAt` / `startsAt > endsAt` → `INVALID_SALE_WINDOW`
 - `totalStock === 0` / `< 0` / non-integer (including `NaN` / `Infinity`) → `INVALID_TOTAL_STOCK`
 - Mutating a `Date` returned from `getStartsAt()` / `getEndsAt()` does not change subsequent getter results
+- Mutating a `Date` passed into `create` / `reconstitute` after construction does not mutate entity state (factories store defensive copies)
 
 **`reconstitute()`**
 
@@ -268,6 +283,9 @@ Required coverage:
 - `remainingStock < 0` / non-integer → `INVALID_REMAINING_STOCK`
 - `remainingStock > totalStock` → `REMAINING_STOCK_EXCEEDS_TOTAL`
 - Applicable shared invariants still enforced
+- Same bidirectional `Date` isolation as `create` (input mutation after construction; getter mutation)
+
+Note: if the merged #11 suite lacks the **input-`Date` mutation** coverage above, backfill that test in a follow-up — **not** as part of #12.
 
 ### Package tooling (#11)
 
@@ -285,24 +303,178 @@ Required coverage:
 - No unrelated changes
 - If commits are authorized, commit messages follow `<type>: <MESSAGE>`
 
-## Pre-implementation sequencing
+## #12 — Product domain model (detailed contract)
+
+### Issue acceptance criteria
+
+From GitHub [#12](https://github.com/rexescario-dev/flash-sale-system/issues/12):
+
+- Product domain model includes `id`, `name`, `description`
+- Model remains extensible without multi-product over-engineering
+
+### Design interpretation for #12
+
+- Implement a rich `Product` **entity** in `@flash-sale/domain`, mirroring the `#11` style (private state, factory, getters, typed validation errors).
+- Domain fields are only `id`, `name`, and optional `description`. No price, SKU, images, categories, or multi-product catalog behavior.
+- **Extensibility** means future fields may be added deliberately in later tickets without introducing catalog abstractions in #12. No extension mechanism, plugin surface, or generic metadata bag (e.g. `Record<string, unknown>`) is required or desired here.
+- Reuse the existing `ProductId` brand from `ids.ts`; ensure it remains exported from the package public API. Do **not** export public branding constructor helpers.
+- `Product.create()` accepts an already-branded `ProductId` (same pattern as #11); runtime validation still verifies the underlying string is non-blank before storing the trimmed value. No public branding constructor is introduced in #12. Callers/tests may obtain a `ProductId` via local casts until a shared branding helper is justified.
+- Domain has no NestJS/Prisma/Redis dependencies and **no runtime package dependencies**.
+- Do **not** modify `FlashSale` in #12. Record ID-normalization mismatch as follow-up debt (see roadmap notes).
+
+### Entity shape
+
+Rich class with private state:
+
+| Field         | Type                  | Notes                                                           |
+| ------------- | --------------------- | --------------------------------------------------------------- |
+| `id`          | `ProductId`           | Branded string; trimmed + non-blank                             |
+| `name`        | `string`              | Trimmed + non-blank                                             |
+| `description` | `string \| undefined` | Optional; when `description !== undefined`, trimmed + non-blank |
+
+No `createdAt`, price, SKU, or media fields on the domain entity.
+
+### Factory
+
+**`Product.create({ id, name, description? })` only**
+
+```ts
+type ProductCreateProps = {
+  id: ProductId;
+  name: string;
+  description?: string;
+};
+```
+
+Sequence: **validate → normalize (trim) → construct**.
+
+There is no derived state and no create-vs-hydrate lifecycle distinction yet, so **`Product.reconstitute` is out of #12** (YAGNI). Add it later only if persistence mapping needs a distinct hydration entry point.
+
+`null` is not part of the TypeScript contract and is not treated as absence. Omitted `description` and `description: undefined` are equivalent: both store `undefined`.
+
+### Normalization & invariants
+
+| Rule                                                   | Stored value                | Error code          |
+| ------------------------------------------------------ | --------------------------- | ------------------- |
+| After trim, `id` length `> 0`                          | trimmed `id` as `ProductId` | `EMPTY_ID`          |
+| After trim, `name` length `> 0`                        | `name.trim()`               | `EMPTY_NAME`        |
+| `description === undefined`                            | stored as `undefined`       | —                   |
+| `description !== undefined` ⇒ after trim, length `> 0` | `description.trim()`        | `EMPTY_DESCRIPTION` |
+
+Explicit rejects: `""` and whitespace-only strings for `id` / `name`. The same rejects apply to `description` when it is provided (`description !== undefined`).
+
+**`ProductId` branding:** `Product.create()` accepts an already-branded `ProductId`. At runtime: trim the underlying string, validate the trimmed value is non-blank, **then** treat the trimmed value as `ProductId` for storage. Never brand/cast before the trimmed non-blank check. No public branding constructor is introduced in #12.
+
+Examples:
+
+- `"  product-123  "` → stored id `"product-123"`
+- `"  Chicken  "` → stored name `"Chicken"`
+- `"   "` / `""` for id or name → rejected
+- omitted / `undefined` description → `getDescription()` is `undefined`
+- `description: "  Fresh  "` → stored `"Fresh"`
+- `description: ""` / `"   "` → `EMPTY_DESCRIPTION`
+
+### Domain errors
+
+```ts
+type ProductValidationErrorCode = 'EMPTY_ID' | 'EMPTY_NAME' | 'EMPTY_DESCRIPTION';
+
+class ProductValidationError extends Error {
+  constructor(
+    public readonly code: ProductValidationErrorCode,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'ProductValidationError';
+  }
+}
+```
+
+Consumers branch on `code`, not by parsing `message`. Messages are descriptive and may evolve (illustrative only: `"Product id must be non-empty"`, `"Product name must be non-empty"`, `"Product description must be non-empty when provided"`). No Result/Either and no deep error hierarchy in #12. No shared trim helpers with `FlashSale` in #12.
+
+### Public API surface
+
+Export the minimum callers need from `packages/domain/src/index.ts`:
+
+- `Product`
+- `ProductCreateProps` (type)
+- `ProductValidationError`
+- `ProductValidationErrorCode` (type)
+- `ProductId` (reuse existing brand from `ids.ts`; retain its package-level public export)
+
+Do not export convenience-only helpers or branding constructors.
+
+### Public getters
+
+- `getId(): ProductId`
+- `getName(): string`
+- `getDescription(): string | undefined`
+
+Strings are immutable; no defensive copying is required.
+
+### Explicitly out of #12
+
+| Concern                                     | Owner                        |
+| ------------------------------------------- | ---------------------------- |
+| `Product.reconstitute`                      | Later, if hydration needs it |
+| FlashSale ID trim / normalization alignment | Follow-up debt ticket        |
+| Shared trim/normalization helpers           | Deferred until justified     |
+| Prisma Product table / migrations           | #15–#16                      |
+| Repository ports and adapters               | #17–#18                      |
+| Purchase model / purchase flow              | #13, #19–#20                 |
+| Price, SKU, images, categories, multi-SKU   | Not in #12                   |
+| GraphQL / Redis                             | EPIC-03 / EPIC-04            |
+
+### Testing (#12)
+
+Jest in `@flash-sale/domain` (`.spec.ts`). No Nest bootstrap, no database, no Redis. Assert on behavior and `code`; do **not** assert exact message strings. Do not test `FlashSale` behavior in `product.spec.ts`.
+
+Required coverage for `Product.create()`:
+
+**Success**
+
+- Valid `{ id, name }` (description omitted) → getters match; `getDescription()` is `undefined`
+- Valid `{ id, name, description: undefined }` → same observable result as omitted description
+- Valid with non-blank description → trimmed description returned
+- Padded id → `getId()` returns the trimmed branded value (regression coverage for #11 vs #12 ID normalization difference)
+- Padded name → `getName()` returns the trimmed value
+
+**Failures (`code` assertions)**
+
+- `""` / whitespace-only `id` → `EMPTY_ID`
+- `""` / whitespace-only `name` → `EMPTY_NAME`
+- `description: ""` / whitespace-only → `EMPTY_DESCRIPTION`
+
+### Definition of Done (#12)
+
+- Implementation complete for this issue only
+- Relevant tests added/updated and passing
+- ESLint and typecheck pass where applicable
+- No unrelated changes (including no `FlashSale` edits)
+- If commits are authorized, commit messages follow `<type>: <MESSAGE>` (no `Co-authored-by`)
+
+## Pre-implementation sequencing (#12)
 
 ```text
-origin/main (EPIC-01 complete)
-    → sync local checkout (do not start from stale epic-01/* tip)
-    → implement #11 on a feature branch
+origin/main (EPIC-01 + #11 merged)
+    → sync local checkout
+    → finalize this umbrella spec with #12 contract
+    → implement #12 on a feature branch
     → run package + workspace quality gates
     → commit: <type>: <MESSAGE>
 ```
 
-## Explicitly out of scope for this design’s first delivery (#11)
+## Explicitly out of scope for #12 delivery
 
-- Prisma schema and migrations
+See the **Explicitly out of #12** table in the #12 contract above. In summary:
+
+- Persistence / Prisma
 - Repository ports/adapters
-- Sale status rules (`getStatus`)
-- Purchase flow and concurrency integration tests
-- GraphQL flash-sale APIs (EPIC-03)
-- Redis client / caching / rate limiting (EPIC-04)
+- FlashSale changes (including ID-normalization alignment and any #11 Date-input test backfill)
+- Purchase model / purchase flow
+- Sale status rules
+- GraphQL (EPIC-03)
+- Redis (EPIC-04)
 
 ## Epic success criteria (from #82)
 
@@ -311,8 +483,4 @@ origin/main (EPIC-01 complete)
 - Inventory reservation is atomic and transactional
 - No overselling under concurrent load in integration tests
 
-Child acceptance criteria remain on the linked issues; this spec does not duplicate them beyond the #11 contract above.
-
-```
-
-```
+Child acceptance criteria remain on the linked issues; this spec does not duplicate them beyond the #11 and #12 contracts above.
