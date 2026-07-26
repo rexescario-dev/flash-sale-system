@@ -1,0 +1,8 @@
+{
+  "extends": "@flash-sale/typescript-config/vite.json",
+  "compilerOptions": {
+    "types": ["vite/client", "vitest/globals"],
+    "baseUrl": "."
+  },
+  "include": ["src"]
+}
