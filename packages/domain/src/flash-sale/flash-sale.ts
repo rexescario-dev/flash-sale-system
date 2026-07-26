@@ -14,6 +14,8 @@ export type FlashSaleReconstituteProps = FlashSaleCreateProps & {
   remainingStock: number;
 };
 
+export type FlashSaleStatus = 'ACTIVE' | 'ENDED' | 'SOLD_OUT' | 'UPCOMING';
+
 export class FlashSale {
   private constructor(
     private readonly id: FlashSaleId,
@@ -108,6 +110,26 @@ export class FlashSale {
 
   getStartsAt(): Date {
     return new Date(this.startsAt.getTime());
+  }
+
+  getStatus(nowUtc: Date): FlashSaleStatus {
+    if (Number.isNaN(nowUtc.getTime())) {
+      throw new FlashSaleValidationError('INVALID_NOW', 'FlashSale nowUtc must be a valid Date');
+    }
+
+    if (nowUtc.getTime() < this.startsAt.getTime()) {
+      return 'UPCOMING';
+    }
+
+    if (nowUtc.getTime() >= this.endsAt.getTime()) {
+      return 'ENDED';
+    }
+
+    if (this.remainingStock === 0) {
+      return 'SOLD_OUT';
+    }
+
+    return 'ACTIVE';
   }
 
   getTotalStock(): number {

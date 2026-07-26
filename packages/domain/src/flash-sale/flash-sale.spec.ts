@@ -302,3 +302,118 @@ describe('FlashSale.reconstitute', () => {
     );
   });
 });
+
+describe('FlashSale.getStatus', () => {
+  const beforeStart = new Date('2026-07-26T09:59:59.999Z');
+  const atStart = new Date('2026-07-26T10:00:00.000Z');
+  const during = new Date('2026-07-26T11:00:00.000Z');
+  const atEnd = new Date('2026-07-26T12:00:00.000Z');
+  const afterEnd = new Date('2026-07-26T12:00:00.001Z');
+
+  function saleWithStock(remainingStock: number): FlashSale {
+    if (remainingStock === 100) {
+      return FlashSale.create({
+        id,
+        productId,
+        endsAt,
+        startsAt,
+        totalStock: 100,
+      });
+    }
+
+    return FlashSale.reconstitute({
+      id,
+      productId,
+      endsAt,
+      remainingStock,
+      startsAt,
+      totalStock: 100,
+    });
+  }
+
+  it.each([
+    {
+      expected: 'UPCOMING',
+      label: 'before start, stock > 0',
+      now: beforeStart,
+      remainingStock: 100,
+    },
+    {
+      expected: 'UPCOMING',
+      label: 'before start, stock === 0',
+      now: beforeStart,
+      remainingStock: 0,
+    },
+    {
+      expected: 'ACTIVE',
+      label: 'at start, stock > 0',
+      now: atStart,
+      remainingStock: 100,
+    },
+    {
+      expected: 'SOLD_OUT',
+      label: 'at start, stock === 0',
+      now: atStart,
+      remainingStock: 0,
+    },
+    {
+      expected: 'ACTIVE',
+      label: 'during window, stock > 0',
+      now: during,
+      remainingStock: 100,
+    },
+    {
+      expected: 'SOLD_OUT',
+      label: 'during window, stock === 0',
+      now: during,
+      remainingStock: 0,
+    },
+    {
+      expected: 'ENDED',
+      label: 'at end, stock > 0',
+      now: atEnd,
+      remainingStock: 100,
+    },
+    {
+      expected: 'ENDED',
+      label: 'at end, stock === 0',
+      now: atEnd,
+      remainingStock: 0,
+    },
+    {
+      expected: 'ENDED',
+      label: 'after end, stock > 0',
+      now: afterEnd,
+      remainingStock: 100,
+    },
+    {
+      expected: 'ENDED',
+      label: 'after end, stock === 0',
+      now: afterEnd,
+      remainingStock: 0,
+    },
+  ] as const)('$label → $expected', ({ expected, now, remainingStock }) => {
+    const sale = saleWithStock(remainingStock);
+    expect(sale.getStatus(now)).toBe(expected);
+  });
+
+  it('throws INVALID_NOW when Date#getTime() is NaN', () => {
+    const sale = saleWithStock(100);
+    expectValidationError(() => sale.getStatus(new Date('invalid')), 'INVALID_NOW');
+  });
+
+  it('compares absolute instants regardless of timezone offset', () => {
+    const sale = saleWithStock(100);
+
+    // 19:00+08:00 == 11:00Z, which is inside [10:00Z, 12:00Z)
+    expect(sale.getStatus(new Date('2026-07-26T19:00:00+08:00'))).toBe('ACTIVE');
+  });
+
+  it('does not mutate remainingStock when resolving status', () => {
+    const sale = saleWithStock(100);
+    sale.getStatus(during);
+    expect(sale.getRemainingStock()).toBe(100);
+    sale.getStatus(afterEnd);
+    expect(sale.getRemainingStock()).toBe(100);
+  });
+});
