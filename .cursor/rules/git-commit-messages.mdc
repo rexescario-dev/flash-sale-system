@@ -1,0 +1,27 @@
+---
+description: Git commit message format — no Co-authored-by or similar footers
+alwaysApply: true
+---
+
+# Git commit messages
+
+When creating commits in this repository:
+
+- Use `<type>: <MESSAGE>` (e.g. `feat: add FlashSale domain entity`)
+- Keep the subject concise; optional short body only when needed for why
+- **Do not** add trailer/footer lines such as:
+  - `Co-authored-by:`
+  - `Signed-off-by:` (unless the user explicitly requests it)
+  - `Generated-by:` / similar AI attribution trailers
+
+```text
+# ❌ BAD
+feat: add health endpoint
+
+Co-authored-by: Cursor <cursoragent@cursor.com>
+
+# ✅ GOOD
+feat: add health endpoint
+```
+
+Pass the message via HEREDOC as usual; end after the subject/body with no trailers.
