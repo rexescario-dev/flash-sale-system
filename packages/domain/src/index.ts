@@ -1,7 +1,11 @@
 export { FlashSaleValidationError } from './flash-sale/flash-sale.errors.js';
 export type { FlashSaleValidationErrorCode } from './flash-sale/flash-sale.errors.js';
 export { FlashSale } from './flash-sale/flash-sale.js';
-export type { FlashSaleCreateProps, FlashSaleReconstituteProps } from './flash-sale/flash-sale.js';
+export type {
+  FlashSaleCreateProps,
+  FlashSaleReconstituteProps,
+  FlashSaleStatus,
+} from './flash-sale/flash-sale.js';
 export type { FlashSaleId, ProductId, PurchaseId, UserId } from './ids.js';
 export { ProductValidationError } from './product/product.errors.js';
 export type { ProductValidationErrorCode } from './product/product.errors.js';
