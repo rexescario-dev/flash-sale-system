@@ -2,7 +2,7 @@
 
 A scalable flash-sale system built with NestJS, GraphQL, React, TypeScript, PostgreSQL, Redis, Playwright, and k6.
 
-> **EPIC-01 (in progress):** Monorepo foundation through quality hooks. CI lands in the final follow-up PR.
+> **EPIC-01:** Monorepo foundation, NestJS API, React/Vite web, Docker Compose, Prisma, GraphQL scaffolding, quality hooks, and CI — with no flash-sale business logic yet.
 
 ## Requirements
 
