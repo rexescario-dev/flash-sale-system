@@ -1,0 +1,28 @@
+---
+description: Sort TS/JS members ascending; prioritize id fields
+alwaysApply: true
+---
+
+# Sort ascending (TS/JS)
+
+Always keep members in **ascending alphabetical** order.
+
+**IDs first:** keys/fields named `id` or ending in `Id` (e.g. `productId`) come before other members; IDs are sorted among themselves A→Z, then the rest A→Z.
+
+Applies to:
+
+- Object literals and type/interface fields
+- Union/enum members
+- Named imports/exports and export statements
+- Class members (when applicable)
+- Consecutive property assignments (e.g. `this.code` before `this.name`)
+
+Enforced by ESLint `eslint-plugin-perfectionist` in `@flash-sale/eslint-config`. Prefer `--fix` over hand-sorting when lint complains.
+
+```ts
+// ❌ BAD
+type Props = { startsAt: Date; id: string; productId: string; endsAt: Date };
+
+// ✅ GOOD — ids first, then A→Z
+type Props = { id: string; productId: string; endsAt: Date; startsAt: Date };
+```
