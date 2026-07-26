@@ -1,4 +1,5 @@
 import { Query, Resolver } from '@nestjs/graphql';
+
 import { HealthService } from './health.service';
 
 @Resolver()

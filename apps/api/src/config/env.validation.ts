@@ -1,7 +1,7 @@
 export type AppEnv = {
+  DATABASE_URL: string;
   NODE_ENV?: string;
   PORT: number;
-  DATABASE_URL: string;
   REDIS_URL: string;
 };
 
@@ -48,9 +48,9 @@ export function validateEnv(config: Record<string, unknown>): AppEnv {
   }
 
   return {
+    DATABASE_URL: databaseUrl!,
     NODE_ENV: nodeEnv,
     PORT: port,
-    DATABASE_URL: databaseUrl!,
     REDIS_URL: redisUrl!,
   };
 }
