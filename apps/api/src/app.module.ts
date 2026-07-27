@@ -4,6 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import { GraphQLModule } from '@nestjs/graphql';
 
 import { validateEnv } from './config/env.validation';
+import { FlashSaleModule } from './flash-sale/flash-sale.module';
 import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
 
@@ -21,6 +22,7 @@ import { PrismaModule } from './prisma/prisma.module';
     }),
     PrismaModule,
     HealthModule,
+    FlashSaleModule,
   ],
 })
 export class AppModule {}

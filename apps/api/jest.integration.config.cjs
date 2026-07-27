@@ -3,16 +3,15 @@ process.env.NODE_ENV = 'test';
 
 /** @type {import('jest').Config} */
 module.exports = {
-  collectCoverageFrom: ['**/*.(t|j)s'],
-  coverageDirectory: '../coverage',
   moduleFileExtensions: ['js', 'json', 'ts'],
   moduleNameMapper: {
     '^(\\.{1,2}/.*)\\.js$': '$1',
-    '^@flash-sale/domain$': '<rootDir>/../../../packages/domain/src/index.ts',
+    '^@flash-sale/domain$': '<rootDir>/../../packages/domain/src/index.ts',
   },
-  rootDir: 'src',
+  rootDir: '.',
   testEnvironment: 'node',
-  testRegex: '.*\\.spec\\.ts$',
+  testMatch: ['<rootDir>/test/flash-sale/**/*.spec.ts'],
+  testTimeout: 30_000,
   transform: {
     '^.+\\.(t|j)s$': 'ts-jest',
   },

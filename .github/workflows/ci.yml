@@ -51,3 +51,4 @@ jobs:
       - run: pnpm --filter api prisma:generate
       - run: pnpm --filter api prisma:migrate:deploy
       - run: pnpm --filter api test:schema
+      - run: pnpm --filter api test:integration
