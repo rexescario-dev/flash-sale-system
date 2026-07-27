@@ -1,13 +1,13 @@
 # EPIC-02 — Flash Sale Domain & Persistence (Design Spec)
 
-**Status:** Draft (#14 sale-status contract — pending review)
-**Date:** 2026-07-26 (updated 2026-07-27 for #14)
+**Status:** Draft (#15 database-schema contract — pending review)
+**Date:** 2026-07-26 (updated 2026-07-27 for #15)
 **Epic:** [EPIC-02 #82](https://github.com/rexescario-dev/flash-sale-system/issues/82)
-**Next implementation ticket:** [#14 — Implement sale status rules](https://github.com/rexescario-dev/flash-sale-system/issues/14)
-**Completed detailed contracts:** [#11 — FlashSale](https://github.com/rexescario-dev/flash-sale-system/issues/11) (merged via PR #98), [#12 — Product](https://github.com/rexescario-dev/flash-sale-system/issues/12) (merged via PR #99), [#13 — Purchase](https://github.com/rexescario-dev/flash-sale-system/issues/13) (merged via PR #100)
+**Next implementation ticket:** [#15 — Implement database schema](https://github.com/rexescario-dev/flash-sale-system/issues/15)
+**Completed detailed contracts:** [#11 — FlashSale](https://github.com/rexescario-dev/flash-sale-system/issues/11) (merged via PR #98), [#12 — Product](https://github.com/rexescario-dev/flash-sale-system/issues/12) (merged via PR #99), [#13 — Purchase](https://github.com/rexescario-dev/flash-sale-system/issues/13) (merged via PR #100), [#14 — Sale status rules](https://github.com/rexescario-dev/flash-sale-system/issues/14) (merged via PR #101)
 **Child issues:** #11–#20
 **Repository:** `rexescario-dev/flash-sale-system`
-**Depends on:** EPIC-01 (#81), #11, #12, and #13 merged to `main`
+**Depends on:** EPIC-01 (#81), #11, #12, #13, and #14 merged to `main`
 
 ## Goal
 
@@ -21,23 +21,24 @@ Share intentional domain concepts in `@flash-sale/domain`. Keep Prisma, NestJS, 
 
 ## Locked decisions
 
-| Area                  | Decision                                                                                                                                                |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Domain package        | `packages/domain` → `@flash-sale/domain`                                                                                                                |
-| Domain purity         | `@flash-sale/domain` has **no runtime dependencies** (devDependencies allowed). It must also have zero NestJS/Prisma/Redis/infrastructure dependencies. |
-| Shared types          | `@flash-sale/types` remains non-domain (transport/contracts only when both apps need them)                                                              |
-| Prisma                | Stays in `apps/api`; schema/migrations/client local to the API                                                                                          |
-| Mapping               | Prisma ↔ domain mapping lives outside `@flash-sale/domain`                                                                                              |
-| Repository ports      | **No repository-port location is locked by this design.** Deferred to #17–#18; not introduced in #11–#14                                                |
-| Repository adapters   | Prisma implementations always in `apps/api`                                                                                                             |
-| GraphQL purchase APIs | Out of EPIC-02; deferred to EPIC-03                                                                                                                     |
-| Redis client          | Out of EPIC-02; deferred to EPIC-04 (Compose service already exists)                                                                                    |
-| #11 modeling style    | Rich `FlashSale` class with private state, `create` / `reconstitute`, getters                                                                           |
-| #12 modeling style    | Rich `Product` class with private state, **`create` only**, getters; mirrors #11 without premature shared helpers                                       |
-| #13 modeling style    | Rich `Purchase` class with private state, **`create` only**, getters; IDs preserved (no trim); defensive `purchasedAt`                                  |
-| #14 status style      | Instance method `FlashSale.getStatus(nowUtc)`; string-union `FlashSaleStatus`; temporal-first precedence; no purchase-gate helpers                      |
-| Value objects         | Not introduced in #11–#14 (`SaleWindow`, `Stock` deferred until justified)                                                                              |
-| Spec shape            | EPIC-02 umbrella architecture + detailed #11, #12, #13, and #14 contracts                                                                               |
+| Area                  | Decision                                                                                                                                                                                                    |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Domain package        | `packages/domain` → `@flash-sale/domain`                                                                                                                                                                    |
+| Domain purity         | `@flash-sale/domain` has **no runtime dependencies** (devDependencies allowed). It must also have zero NestJS/Prisma/Redis/infrastructure dependencies.                                                     |
+| Shared types          | `@flash-sale/types` remains non-domain (transport/contracts only when both apps need them)                                                                                                                  |
+| Prisma                | Stays in `apps/api`; schema/migrations/client local to the API                                                                                                                                              |
+| Mapping               | Prisma ↔ domain mapping lives outside `@flash-sale/domain`                                                                                                                                                  |
+| Repository ports      | **No repository-port location is locked by this design.** Deferred to #17–#18; not introduced in #11–#15                                                                                                    |
+| Repository adapters   | Prisma implementations always in `apps/api`                                                                                                                                                                 |
+| GraphQL purchase APIs | Out of EPIC-02; deferred to EPIC-03                                                                                                                                                                         |
+| Redis client          | Out of EPIC-02; deferred to EPIC-04 (Compose service already exists)                                                                                                                                        |
+| #11 modeling style    | Rich `FlashSale` class with private state, `create` / `reconstitute`, getters                                                                                                                               |
+| #12 modeling style    | Rich `Product` class with private state, **`create` only**, getters; mirrors #11 without premature shared helpers                                                                                           |
+| #13 modeling style    | Rich `Purchase` class with private state, **`create` only**, getters; IDs preserved (no trim); defensive `purchasedAt`                                                                                      |
+| #14 status style      | Instance method `FlashSale.getStatus(nowUtc)`; string-union `FlashSaleStatus`; temporal-first precedence; no purchase-gate helpers                                                                          |
+| #15 schema style      | Prisma-first in `apps/api`; domain-aligned columns; app-supplied `String @id`; snake_case SQL maps; `timestamptz(3)`; `onDelete: Restrict`; FK indexes; audit timestamps; named CHECKs via edited migration |
+| Value objects         | Not introduced in #11–#15 (`SaleWindow`, `Stock` deferred until justified)                                                                                                                                  |
+| Spec shape            | EPIC-02 umbrella architecture + detailed #11, #12, #13, #14, and #15 contracts                                                                                                                              |
 
 ## Dependency direction
 
@@ -82,7 +83,7 @@ Domain entities do not know Prisma. Mapping is always outside `@flash-sale/domai
 
 ### Repository ports (#17–#18)
 
-Repository ports are **not** part of #11, #12, #13, or #14.
+Repository ports are **not** part of #11, #12, #13, #14, or #15.
 
 **No repository-port location is locked by EPIC-02 design yet. This decision belongs to #17–#18.**
 
@@ -110,12 +111,12 @@ Intended implementation sequence after domain models:
       │
       ├── sale-window invariant (create / reconstitute)
       │
-      └── #14 derived status (getStatus)   ← next
+      └── #14 derived status (getStatus)
                │
 #12 Product    │
 #13 Purchase   │
                ▼
-#15 Persistence schema (FlashSale / Product / Purchase)
+#15 Persistence schema (FlashSale / Product / Purchase)   ← next
       ↓
 #16 Purchase uniqueness constraint UNIQUE(flash_sale_id, user_id)
       ↓
@@ -135,8 +136,8 @@ Intended implementation sequence after domain models:
 Notes:
 
 - The uniqueness constraint is specifically on **Purchase**: `UNIQUE(flash_sale_id, user_id)`. It prevents duplicate purchases; it does **not** by itself make stock reservation concurrency-safe. Atomic reservation and oversell protection are owned by #19–#20.
-- Exact implementation details for #15–#20 are deferred until those tickets are planned; ownership boundaries above should not need rediscovery. The detailed `#14` contract is below (`#11`–`#13` contracts remain above/earlier in this file).
-- **Temporary identity-normalization inconsistency:** `#11` `FlashSale` and `#13` `Purchase` **preserve** non-trimmed IDs; `#12` `Product` **trims** `id` / `name` / provided `description`. This is an **acknowledged cross-entity inconsistency, not a desired domain convention**. Until a dedicated identity-normalization ticket resolves it, each entity must preserve its existing contract. New tickets must **not** silently normalize or de-normalize IDs for consistency — including `#14` (do not modify `FlashSale` ID normalization).
+- Exact implementation details for #16–#20 are deferred until those tickets are planned; ownership boundaries above should not need rediscovery. The detailed `#15` contract is below (`#11`–`#14` contracts remain above/earlier in this file).
+- **Temporary identity-normalization inconsistency:** `#11` `FlashSale` and `#13` `Purchase` **preserve** non-trimmed IDs; `#12` `Product` **trims** `id` / `name` / provided `description`. This is an **acknowledged cross-entity inconsistency, not a desired domain convention**. Until a dedicated identity-normalization ticket resolves it, each entity must preserve its existing contract. New tickets must **not** silently normalize or de-normalize IDs for consistency — including `#15` (persist IDs exactly as supplied by domain/app; do not modify `FlashSale` ID normalization).
 
 ## Target package tree (after #14)
 
@@ -461,7 +462,7 @@ Strings are immutable; no defensive copying is required.
 | `Product.reconstitute`                      | Later, if hydration needs it |
 | FlashSale ID trim / normalization alignment | Follow-up debt ticket        |
 | Shared trim/normalization helpers           | Deferred until justified     |
-| Prisma Product table / migrations           | #15–#16                      |
+| Prisma Product table / migrations           | #15                          |
 | Repository ports and adapters               | #17–#18                      |
 | Purchase model / purchase flow              | #13, #19–#20                 |
 | Price, SKU, images, categories, multi-SKU   | Not in #12                   |
@@ -901,6 +902,324 @@ See the **Explicitly out of #14** table in the #14 contract above. In summary:
 - GraphQL (EPIC-03)
 - Redis (EPIC-04)
 
+## #15 — Implement database schema (detailed contract)
+
+### Issue acceptance criteria
+
+From GitHub [#15](https://github.com/rexescario-dev/flash-sale-system/issues/15):
+
+- Product, FlashSale, and Purchase tables exist via Prisma migrations
+- Timestamps and relations are correct
+
+### Design interpretation for #15
+
+- Implement the PostgreSQL persistence foundation in `apps/api` using Prisma (`schema.prisma` + **exactly one new migration** appended to the existing Prisma migration history — creating that history if it is still empty after EPIC-01).
+- **Domain contracts (`#11`–`#13`) are the source of truth for persisted business columns.** Do not invent `price`, product-level `stock`, `quantity`, purchase status enums, or other fields absent from the domain.
+- **IDs are application/domain supplied.** Persist `String @id` with **no** Prisma/DB `@default(cuid())` / `@default(uuid())`. Domain factories already accept branded IDs; Prisma must persist the supplied values as-is and must not trim or otherwise normalize them. Broader ID-format strategy (UUIDv7/ULID/etc.) is deferred to a future identity ticket.
+- **Status is derived, not persisted.** Do **not** add a `status` column on `FlashSale` (or elsewhere). Status continues to come from `FlashSale.getStatus(nowUtc)` (`#14`).
+- **Purchase uniqueness is owned by `#16`.** Do **not** add `@@unique([flashSaleId, userId])` / `UNIQUE(flash_sale_id, user_id)` in `#15` (neither in `schema.prisma` nor in the `#15` migration SQL). `#16` adds the positive uniqueness schema test; `#15` does **not** require a runtime “unique constraint absent” assertion.
+- **No repositories, mappers, GraphQL, or Redis client** in `#15`.
+- **No domain package changes** in `#15`.
+- Approach: **Prisma models + one new edited migration** for named CHECK constraints Prisma cannot express first-class.
+
+### Locked decisions (#15)
+
+| Decision            | Choice                                                                                                              |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Column sets         | Domain-aligned Product / FlashSale / Purchase + audit timestamps                                                    |
+| Audit timestamps    | `createdAt` + `updatedAt` on all three models                                                                       |
+| Domain timestamps   | `FlashSale.startsAt` / `endsAt`, `Purchase.purchasedAt` (exposed by domain); audit timestamps stay persistence-only |
+| IDs                 | `String @id` with **no** DB `@default`; application/domain supplies IDs before persist                              |
+| FK delete behavior  | Explicit `onDelete: Restrict` on both relations (historical integrity)                                              |
+| FK indexes          | `@@index([productId])` on FlashSale; `@@index([flashSaleId])` on Purchase; **no** standalone `@@index([userId])`    |
+| SQL naming          | Snake_case tables/columns via `@@map` / `@map`; Prisma Client remains camelCase                                     |
+| DateTime storage    | Every `DateTime` is `@db.Timestamptz(3)`                                                                            |
+| CHECK constraints   | Four named FlashSale structural CHECKs in migration SQL (see below)                                                 |
+| Purchase uniqueness | Deferred to `#16` (no `@@unique` and no composite unique index in `#15`)                                            |
+| Persisted status    | **None**                                                                                                            |
+| Delivery approach   | Prisma-first schema; one new migration appended to history; manually add named CHECKs                               |
+| Verification        | Lightweight PostgreSQL schema inspection test (catalog facts)                                                       |
+| CI                  | Dedicated `schema-test` job + branch-protection/ruleset requirement                                                 |
+
+### Persistence vs domain timestamps
+
+| Kind                         | Fields                              | Exposed on domain entities?                      |
+| ---------------------------- | ----------------------------------- | ------------------------------------------------ |
+| Domain timestamps            | `startsAt`, `endsAt`, `purchasedAt` | Yes                                              |
+| Persistence/audit timestamps | `createdAt`, `updatedAt`            | **No** — Prisma-only at the persistence boundary |
+
+```prisma
+createdAt DateTime @default(now()) @db.Timestamptz(3) @map("created_at")
+updatedAt DateTime @updatedAt @db.Timestamptz(3) @map("updated_at")
+```
+
+**`updatedAt` semantics:** `@updatedAt` is maintained by **Prisma Client** on Prisma-managed updates. It is **not** a PostgreSQL trigger and is **not** used for business decisions. Any future raw SQL / `updateMany` / database-level update path (notably `#19`–`#20` inventory reservation) that mutates these rows must explicitly maintain `updated_at` if audit semantics require it.
+
+**Mapper implication (for `#17`–`#18`, not implemented in `#15`):** mappers may discard `createdAt` / `updatedAt` when converting Prisma records to domain entities because these fields are persistence/audit metadata and are not represented by domain entities. Domain factories such as `Product.create` / `Purchase.create` / `FlashSale.reconstitute` do not accept audit timestamps.
+
+### Target Prisma schema (`apps/api/prisma/schema.prisma`)
+
+Authoritative model contract for `#15` (generator/datasource unchanged from EPIC-01):
+
+```prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Product {
+  id          String   @id
+  name        String
+  description String?
+  createdAt   DateTime @default(now()) @db.Timestamptz(3) @map("created_at")
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3) @map("updated_at")
+
+  flashSales FlashSale[]
+
+  @@map("products")
+}
+
+model FlashSale {
+  id             String   @id
+  productId      String   @map("product_id")
+  startsAt       DateTime @db.Timestamptz(3) @map("starts_at")
+  endsAt         DateTime @db.Timestamptz(3) @map("ends_at")
+  totalStock     Int      @map("total_stock")
+  remainingStock Int      @map("remaining_stock")
+  createdAt      DateTime @default(now()) @db.Timestamptz(3) @map("created_at")
+  updatedAt      DateTime @updatedAt @db.Timestamptz(3) @map("updated_at")
+
+  product   Product    @relation(fields: [productId], references: [id], onDelete: Restrict)
+  purchases Purchase[]
+
+  @@index([productId])
+  @@map("flash_sales")
+}
+
+model Purchase {
+  id          String   @id
+  flashSaleId String   @map("flash_sale_id")
+  userId      String   @map("user_id")
+  purchasedAt DateTime @db.Timestamptz(3) @map("purchased_at")
+  createdAt   DateTime @default(now()) @db.Timestamptz(3) @map("created_at")
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3) @map("updated_at")
+
+  flashSale FlashSale @relation(fields: [flashSaleId], references: [id], onDelete: Restrict)
+
+  @@index([flashSaleId])
+  @@map("purchases")
+}
+```
+
+Relation graph:
+
+```text
+products
+   │ onDelete: Restrict
+   ▼
+flash_sales
+   │ onDelete: Restrict
+   ▼
+purchases
+```
+
+**`onDelete: Restrict` rationale:** parent deletion is intentionally restricted because flash-sale and purchase rows represent historical business data; cascading deletion is not appropriate for the initial persistence model. Configure `Restrict` explicitly (do not rely on Prisma/PostgreSQL defaults). Schema tests must verify the actual catalog delete action is `RESTRICT` (not merely “non-cascade”).
+
+There is **no** `User` table. `Purchase.userId` is a plain `String` identity reference owned by authentication/identity concerns outside EPIC-02. Do **not** add `@@index([userId])` in `#15`; the `#16` unique composite `(flash_sale_id, user_id)` will cover the “has this user purchased this sale?” lookup.
+
+### Migration & CHECK constraints
+
+`#15` ships **exactly one new** Prisma migration (appended to existing history) that creates all three tables, columns, primary keys, foreign keys with `ON DELETE RESTRICT`, and explicit indexes on `flash_sales(product_id)` and `purchases(flash_sale_id)`.
+
+Because Prisma does not first-class these structural invariants, **manually add** the following **named** PostgreSQL `CHECK` constraints to that migration SQL (on `flash_sales`):
+
+```sql
+CONSTRAINT flash_sales_total_stock_positive
+  CHECK (total_stock > 0),
+
+CONSTRAINT flash_sales_remaining_stock_non_negative
+  CHECK (remaining_stock >= 0),
+
+CONSTRAINT flash_sales_remaining_stock_lte_total
+  CHECK (remaining_stock <= total_stock),
+
+CONSTRAINT flash_sales_starts_before_ends
+  CHECK (starts_at < ends_at)
+```
+
+These are defense-in-depth for universally true **row-local** structural rules. They do **not** replace domain factories or later purchase/reservation behavior.
+
+**Migration preservation rules:**
+
+> The `#15` migration contains manually added named PostgreSQL CHECK constraints that are not represented in `schema.prisma`. Never delete, regenerate, squash, or replace the `#15` migration without first preserving or reintroducing these constraints.
+
+> The schema verification test is the regression guard for these manually maintained constraints (assert by **constraint name**).
+
+**Explicitly not CHECK-enforced in `#15`:**
+
+| Rule                                              | Owner                     |
+| ------------------------------------------------- | ------------------------- |
+| Sale lifecycle / purchasability                   | `#14` / `#20`             |
+| Atomic stock decrement / reservation              | `#19`–`#20`               |
+| One purchase per user per flash sale              | `#16` (+ `#18` / `#20`)   |
+| “Sale must not start in the past” creation policy | Not a current domain rule |
+
+### Naming convention
+
+```text
+Domain / Prisma Client / TypeScript     PostgreSQL
+────────────────────────────────────────────────────
+Product                                 products
+FlashSale                               flash_sales
+Purchase                                purchases
+createdAt                               created_at
+updatedAt                               updated_at
+productId                               product_id
+flashSaleId                             flash_sale_id
+userId                                  user_id
+purchasedAt                             purchased_at
+totalStock                              total_stock
+remainingStock                          remaining_stock
+startsAt                                starts_at
+endsAt                                  ends_at
+```
+
+### Target tree (after #15)
+
+```text
+apps/api/
+  prisma/
+    schema.prisma
+    migrations/
+      <timestamp>_init_flash_sale_schema/
+        migration.sql          # tables + PKs + FKs + Restrict + indexes + named CHECKs
+  src/
+    prisma/                    # existing PrismaModule / PrismaService (unchanged role)
+  test/
+    schema/                    # lightweight DB schema verification (name may vary)
+      ...schema*.spec.ts
+  package.json                 # add test:schema (and migrate deploy helper if needed)
+.github/workflows/ci.yml       # add dedicated schema-test job
+```
+
+`@flash-sale/domain` package tree is unchanged by `#15`.
+
+### Testing (#15)
+
+Lightweight **PostgreSQL-backed schema inspection** tests (not repository/mapper round-trips). Prefer catalog facts via `information_schema` and `pg_catalog` / `pg_constraint` over inserting business rows.
+
+Required coverage after `prisma migrate deploy`:
+
+**Structure**
+
+- Tables `products`, `flash_sales`, `purchases` exist
+- Each table has `id` as its **PRIMARY KEY**
+- Expected columns exist with snake_case names
+- Nullability:
+
+| Table         | Column            | Nullable |
+| ------------- | ----------------- | -------- |
+| `products`    | `id`              | NO       |
+| `products`    | `name`            | NO       |
+| `products`    | `description`     | YES      |
+| `products`    | `created_at`      | NO       |
+| `products`    | `updated_at`      | NO       |
+| `flash_sales` | `id`              | NO       |
+| `flash_sales` | `product_id`      | NO       |
+| `flash_sales` | `starts_at`       | NO       |
+| `flash_sales` | `ends_at`         | NO       |
+| `flash_sales` | `total_stock`     | NO       |
+| `flash_sales` | `remaining_stock` | NO       |
+| `flash_sales` | `created_at`      | NO       |
+| `flash_sales` | `updated_at`      | NO       |
+| `purchases`   | `id`              | NO       |
+| `purchases`   | `flash_sale_id`   | NO       |
+| `purchases`   | `user_id`         | NO       |
+| `purchases`   | `purchased_at`    | NO       |
+| `purchases`   | `created_at`      | NO       |
+| `purchases`   | `updated_at`      | NO       |
+
+**Types / relations / indexes**
+
+- Timestamp columns report `data_type = timestamp with time zone` and `datetime_precision = 3` via `information_schema.columns`
+- `flash_sales.product_id` FK → `products.id` with delete action `RESTRICT`
+- `purchases.flash_sale_id` FK → `flash_sales.id` with delete action `RESTRICT`
+- Index exists on `flash_sales(product_id)`
+- Index exists on `purchases(flash_sale_id)`
+
+**CHECK constraints (by name)**
+
+- `flash_sales_total_stock_positive`
+- `flash_sales_remaining_stock_non_negative`
+- `flash_sales_remaining_stock_lte_total`
+- `flash_sales_starts_before_ends`
+
+**Ticket-boundary notes (not runtime “absence” tests)**
+
+- `#15` `schema.prisma` and migration must not introduce `@@unique([flashSaleId, userId])`
+- `#16` owns the positive assertion that `UNIQUE(flash_sale_id, user_id)` exists
+
+Do **not** assert repository ports, domain mappers, GraphQL, Redis, or purchase-flow outcomes in `#15`.
+
+### CI (#15)
+
+Add a dedicated CI job (e.g. `schema-test`) that:
+
+1. Provisions a PostgreSQL service
+2. Sets `DATABASE_URL`
+3. Installs workspace deps
+4. Runs `prisma generate` + `prisma migrate deploy` for `apps/api`
+5. Runs the schema verification tests (e.g. `pnpm --filter api test:schema`)
+
+Keep existing lint / typecheck / unit-test / build jobs **DB-independent**. The job must fail if PKs/nullability/FKs/`Restrict`/indexes/`timestamptz(3)`/named CHECKs regress (including accidental CHECK removal after migration regeneration).
+
+**Repository configuration prerequisite:** adding the workflow job alone does not make it merge-blocking. Configure GitHub branch protection / rulesets so `schema-test` is required for PR merge to the protected default branch. If that settings change is outside the code PR, track it as a repo-config prerequisite for `#15` DoD.
+
+Exact YAML should follow existing `.github/workflows/ci.yml` conventions (pnpm, Node from `.nvmrc`, frozen lockfile).
+
+### Explicitly out of #15
+
+| Concern                                                                                 | Owner                                                   |
+| --------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| `@@unique([flashSaleId, userId])` / positive uniqueness schema + duplicate-insert tests | `#16`                                                   |
+| Repository ports                                                                        | `#17`                                                   |
+| Prisma repository adapters / mappers / uniqueness error mapping                         | `#18`                                                   |
+| Atomic inventory reservation (and any raw-SQL `updated_at` maintenance)                 | `#19`                                                   |
+| Transactional purchase flow / `ALREADY_PURCHASED`                                       | `#20`                                                   |
+| Persisted `status` column                                                               | Not in EPIC-02 (status is derived)                      |
+| Domain entity changes / cross-entity ID normalization alignment                         | Follow-up debt ticket / not `#15`                       |
+| GraphQL purchase APIs                                                                   | EPIC-03                                                 |
+| Redis client                                                                            | EPIC-04                                                 |
+| Seed data / admin CRUD APIs                                                             | Later tickets                                           |
+| UUIDv7/ULID generator standardization                                                   | Later identity ticket (IDs remain app-supplied strings) |
+| Standalone `@@index([userId])`                                                          | Deferred until a user-purchase listing use case exists  |
+
+### Definition of Done (#15)
+
+- Implementation complete for this issue only
+- Prisma models + one new migration create Product / FlashSale / Purchase with correct PKs, nullability, timestamps, relations, maps, `Restrict`, FK indexes, `timestamptz(3)`, and named FlashSale CHECKs
+- Schema inspection tests added and passing
+- Dedicated CI `schema-test` job runs migrations + schema tests against PostgreSQL; branch protection/ruleset requirement documented or applied
+- ESLint and typecheck pass where applicable
+- No unrelated changes (no uniqueness constraint; no repos/mappers; no GraphQL; no Redis; no domain package changes)
+- If commits are authorized, commit messages follow `<type>: <MESSAGE>` (no `Co-authored-by`)
+
+### Pre-implementation sequencing (#15)
+
+```text
+origin/main (EPIC-01 + #11 + #12 + #13 + #14 merged at 350dedf+)
+    → sync local checkout
+    → finalize this umbrella spec with #15 contract
+    → write implementation plan
+    → implement #15 on a feature branch
+    → run schema-test + workspace quality gates
+    → commit: <type>: <MESSAGE>
+```
+
 ## Epic success criteria (from #82)
 
 - Sale status rules are enforced in the domain
@@ -908,4 +1227,4 @@ See the **Explicitly out of #14** table in the #14 contract above. In summary:
 - Inventory reservation is atomic and transactional
 - No overselling under concurrent load in integration tests
 
-Child acceptance criteria remain on the linked issues; this spec does not duplicate them beyond the #11, #12, #13, and #14 contracts above.
+Child acceptance criteria remain on the linked issues; this spec does not duplicate them beyond the #11, #12, #13, #14, and #15 contracts above.
