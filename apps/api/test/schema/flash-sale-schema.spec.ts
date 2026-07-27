@@ -14,6 +14,46 @@ type ColumnRow = {
   is_nullable: 'NO' | 'YES';
 };
 
+type PurchaseIndexRow = {
+  columns: string[];
+  index_name: string;
+  is_unique: boolean;
+};
+
+async function listPurchaseIndexesByOrderedColumns(
+  client: PrismaClient,
+): Promise<PurchaseIndexRow[]> {
+  // Intentional scope: public.purchases only (exclude other schemas/tables).
+  // Unique constraints in PostgreSQL are backed by unique indexes; assert the
+  // uniqueness invariant via pg_index metadata (ordered columns + indisunique),
+  // not by constraint/index name and not by assuming constraint vs index type.
+  const rows = await client.$queryRaw<
+    { columns: string[]; index_name: string; is_unique: boolean }[]
+  >`
+    SELECT
+      i.relname AS index_name,
+      ix.indisunique AS is_unique,
+      array_agg(a.attname ORDER BY ord.ordinality) AS columns
+    FROM pg_class t
+    JOIN pg_namespace ns ON ns.oid = t.relnamespace
+    JOIN pg_index ix ON t.oid = ix.indrelid
+    JOIN pg_class i ON i.oid = ix.indexrelid
+    JOIN LATERAL unnest(ix.indkey) WITH ORDINALITY AS ord(attnum, ordinality)
+      ON TRUE
+    JOIN pg_attribute a
+      ON a.attrelid = t.oid
+     AND a.attnum = ord.attnum
+    WHERE ns.nspname = 'public'
+      AND t.relname = 'purchases'
+      AND t.relkind = 'r'
+      AND a.attnum > 0
+    GROUP BY i.relname, ix.indisunique
+    ORDER BY i.relname
+  `;
+
+  return rows;
+}
+
 describe('flash sale PostgreSQL schema (#15)', () => {
   afterAll(async () => {
     await prisma.$disconnect();
@@ -219,6 +259,9 @@ describe('flash sale PostgreSQL schema (#15)', () => {
     expect(
       indexes.some((idx) => idx.tablename === 'flash_sales' && idx.indexdef.includes('product_id')),
     ).toBe(true);
+    // The composite unique index from #16 covers flash_sale_id as its leftmost
+    // prefix, so this assertion verifies sale-scoped index coverage rather than
+    // requiring a standalone flash_sale_id index.
     expect(
       indexes.some(
         (idx) => idx.tablename === 'purchases' && idx.indexdef.includes('flash_sale_id'),
@@ -252,5 +295,183 @@ describe('flash sale PostgreSQL schema (#15)', () => {
         'flash_sales_starts_before_ends',
       ]),
     );
+  });
+
+  describe('purchase uniqueness (#16)', () => {
+    it('has a database-enforced unique invariant on ordered (flash_sale_id, user_id)', async () => {
+      const indexes = await listPurchaseIndexesByOrderedColumns(prisma);
+
+      expect(
+        indexes.some(
+          (idx) =>
+            idx.is_unique &&
+            idx.columns.length === 2 &&
+            idx.columns[0] === 'flash_sale_id' &&
+            idx.columns[1] === 'user_id',
+        ),
+      ).toBe(true);
+    });
+
+    it('removes the non-unique standalone (flash_sale_id) index', async () => {
+      const indexes = await listPurchaseIndexesByOrderedColumns(prisma);
+
+      expect(
+        indexes.some(
+          (idx) => !idx.is_unique && idx.columns.length === 1 && idx.columns[0] === 'flash_sale_id',
+        ),
+      ).toBe(false);
+    });
+
+    it('rejects a duplicate (flashSaleId, userId) pair with Prisma P2002', async () => {
+      const suffix = crypto.randomUUID();
+      const productId = `product-unique-${suffix}`;
+      const flashSaleId = `sale-unique-${suffix}`;
+      const purchaseId1 = `purchase-1-${suffix}`;
+      const purchaseId2 = `purchase-2-${suffix}`;
+      const userId = `user-y-${suffix}`;
+      const now = new Date('2026-07-27T12:00:00.000Z');
+
+      await prisma.product.create({
+        data: {
+          id: productId,
+          name: 'Unique Constraint Product',
+          updatedAt: now,
+        },
+      });
+
+      await prisma.flashSale.create({
+        data: {
+          id: flashSaleId,
+          productId,
+          endsAt: new Date('2026-07-27T14:00:00.000Z'),
+          remainingStock: 10,
+          startsAt: new Date('2026-07-27T10:00:00.000Z'),
+          totalStock: 10,
+          updatedAt: now,
+        },
+      });
+
+      await prisma.purchase.create({
+        data: {
+          flashSaleId,
+          id: purchaseId1,
+          userId,
+          purchasedAt: now,
+          updatedAt: now,
+        },
+      });
+
+      try {
+        await expect(
+          prisma.purchase.create({
+            data: {
+              flashSaleId,
+              id: purchaseId2,
+              userId,
+              purchasedAt: now,
+              updatedAt: now,
+            },
+          }),
+        ).rejects.toMatchObject({
+          code: 'P2002',
+        });
+      } finally {
+        await prisma.purchase.deleteMany({
+          where: { id: { in: [purchaseId1, purchaseId2] } },
+        });
+        await prisma.flashSale.deleteMany({ where: { id: flashSaleId } });
+        await prisma.product.deleteMany({ where: { id: productId } });
+      }
+    });
+
+    it('allows different users on the same sale and the same user on a different sale', async () => {
+      const suffix = crypto.randomUUID();
+      const productId = `product-unique-${suffix}`;
+      const flashSaleX = `sale-unique-x-${suffix}`;
+      const flashSaleW = `sale-unique-w-${suffix}`;
+      const purchaseXy = `purchase-xy-${suffix}`;
+      const purchaseXz = `purchase-xz-${suffix}`;
+      const purchaseWy = `purchase-wy-${suffix}`;
+      const userY = `user-y-${suffix}`;
+      const userZ = `user-z-${suffix}`;
+      const now = new Date('2026-07-27T12:00:00.000Z');
+
+      await prisma.product.create({
+        data: {
+          id: productId,
+          name: 'Composite Unique Product',
+          updatedAt: now,
+        },
+      });
+
+      await prisma.flashSale.createMany({
+        data: [
+          {
+            id: flashSaleX,
+            productId,
+            endsAt: new Date('2026-07-27T14:00:00.000Z'),
+            remainingStock: 10,
+            startsAt: new Date('2026-07-27T10:00:00.000Z'),
+            totalStock: 10,
+            updatedAt: now,
+          },
+          {
+            id: flashSaleW,
+            productId,
+            endsAt: new Date('2026-07-27T15:00:00.000Z'),
+            remainingStock: 5,
+            startsAt: new Date('2026-07-27T11:00:00.000Z'),
+            totalStock: 5,
+            updatedAt: now,
+          },
+        ],
+      });
+
+      try {
+        await expect(
+          prisma.purchase.create({
+            data: {
+              flashSaleId: flashSaleX,
+              id: purchaseXy,
+              userId: userY,
+              purchasedAt: now,
+              updatedAt: now,
+            },
+          }),
+        ).resolves.toBeTruthy();
+
+        await expect(
+          prisma.purchase.create({
+            data: {
+              flashSaleId: flashSaleX,
+              id: purchaseXz,
+              userId: userZ,
+              purchasedAt: now,
+              updatedAt: now,
+            },
+          }),
+        ).resolves.toBeTruthy();
+
+        await expect(
+          prisma.purchase.create({
+            data: {
+              flashSaleId: flashSaleW,
+              id: purchaseWy,
+              userId: userY,
+              purchasedAt: now,
+              updatedAt: now,
+            },
+          }),
+        ).resolves.toBeTruthy();
+      } finally {
+        await prisma.purchase.deleteMany({
+          where: { id: { in: [purchaseXy, purchaseXz, purchaseWy] } },
+        });
+        await prisma.flashSale.deleteMany({
+          where: { id: { in: [flashSaleX, flashSaleW] } },
+        });
+        await prisma.product.deleteMany({ where: { id: productId } });
+      }
+    });
   });
 });
