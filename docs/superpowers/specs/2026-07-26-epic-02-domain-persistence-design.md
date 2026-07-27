@@ -1,13 +1,13 @@
 # EPIC-02 — Flash Sale Domain & Persistence (Design Spec)
 
-**Status:** Draft (#15 database-schema contract — pending review)
-**Date:** 2026-07-26 (updated 2026-07-27 for #15)
+**Status:** Draft (#16 unique-purchase-constraint contract — pending review)
+**Date:** 2026-07-26 (updated 2026-07-27 for #16)
 **Epic:** [EPIC-02 #82](https://github.com/rexescario-dev/flash-sale-system/issues/82)
-**Next implementation ticket:** [#15 — Implement database schema](https://github.com/rexescario-dev/flash-sale-system/issues/15)
-**Completed detailed contracts:** [#11 — FlashSale](https://github.com/rexescario-dev/flash-sale-system/issues/11) (merged via PR #98), [#12 — Product](https://github.com/rexescario-dev/flash-sale-system/issues/12) (merged via PR #99), [#13 — Purchase](https://github.com/rexescario-dev/flash-sale-system/issues/13) (merged via PR #100), [#14 — Sale status rules](https://github.com/rexescario-dev/flash-sale-system/issues/14) (merged via PR #101)
+**Next implementation ticket:** [#16 — Add unique purchase constraint](https://github.com/rexescario-dev/flash-sale-system/issues/16)
+**Completed detailed contracts:** [#11 — FlashSale](https://github.com/rexescario-dev/flash-sale-system/issues/11) (merged via PR #98), [#12 — Product](https://github.com/rexescario-dev/flash-sale-system/issues/12) (merged via PR #99), [#13 — Purchase](https://github.com/rexescario-dev/flash-sale-system/issues/13) (merged via PR #100), [#14 — Sale status rules](https://github.com/rexescario-dev/flash-sale-system/issues/14) (merged via PR #101), [#15 — Database schema](https://github.com/rexescario-dev/flash-sale-system/issues/15) (merged via PR #102)
 **Child issues:** #11–#20
 **Repository:** `rexescario-dev/flash-sale-system`
-**Depends on:** EPIC-01 (#81), #11, #12, #13, and #14 merged to `main`
+**Depends on:** EPIC-01 (#81), #11–#15 merged to `main`
 
 ## Goal
 
@@ -28,7 +28,7 @@ Share intentional domain concepts in `@flash-sale/domain`. Keep Prisma, NestJS, 
 | Shared types          | `@flash-sale/types` remains non-domain (transport/contracts only when both apps need them)                                                                                                                  |
 | Prisma                | Stays in `apps/api`; schema/migrations/client local to the API                                                                                                                                              |
 | Mapping               | Prisma ↔ domain mapping lives outside `@flash-sale/domain`                                                                                                                                                  |
-| Repository ports      | **No repository-port location is locked by this design.** Deferred to #17–#18; not introduced in #11–#15                                                                                                    |
+| Repository ports      | **No repository-port location is locked by this design.** Deferred to #17–#18; not introduced in #11–#16                                                                                                    |
 | Repository adapters   | Prisma implementations always in `apps/api`                                                                                                                                                                 |
 | GraphQL purchase APIs | Out of EPIC-02; deferred to EPIC-03                                                                                                                                                                         |
 | Redis client          | Out of EPIC-02; deferred to EPIC-04 (Compose service already exists)                                                                                                                                        |
@@ -37,8 +37,9 @@ Share intentional domain concepts in `@flash-sale/domain`. Keep Prisma, NestJS, 
 | #13 modeling style    | Rich `Purchase` class with private state, **`create` only**, getters; IDs preserved (no trim); defensive `purchasedAt`                                                                                      |
 | #14 status style      | Instance method `FlashSale.getStatus(nowUtc)`; string-union `FlashSaleStatus`; temporal-first precedence; no purchase-gate helpers                                                                          |
 | #15 schema style      | Prisma-first in `apps/api`; domain-aligned columns; app-supplied `String @id`; snake_case SQL maps; `timestamptz(3)`; `onDelete: Restrict`; FK indexes; audit timestamps; named CHECKs via edited migration |
-| Value objects         | Not introduced in #11–#15 (`SaleWindow`, `Stock` deferred until justified)                                                                                                                                  |
-| Spec shape            | EPIC-02 umbrella architecture + detailed #11, #12, #13, #14, and #15 contracts                                                                                                                              |
+| #16 uniqueness style  | Prisma-first `@@unique([flashSaleId, userId])`; drop redundant `@@index([flashSaleId])`; one new append-only migration; catalog + behavioral proof; no `ALREADY_PURCHASED` mapping                          |
+| Value objects         | Not introduced in #11–#16 (`SaleWindow`, `Stock` deferred until justified)                                                                                                                                  |
+| Spec shape            | EPIC-02 umbrella architecture + detailed #11, #12, #13, #14, #15, and #16 contracts                                                                                                                         |
 
 ## Dependency direction
 
@@ -83,7 +84,7 @@ Domain entities do not know Prisma. Mapping is always outside `@flash-sale/domai
 
 ### Repository ports (#17–#18)
 
-Repository ports are **not** part of #11, #12, #13, #14, or #15.
+Repository ports are **not** part of #11, #12, #13, #14, #15, or #16.
 
 **No repository-port location is locked by EPIC-02 design yet. This decision belongs to #17–#18.**
 
@@ -116,9 +117,9 @@ Intended implementation sequence after domain models:
 #12 Product    │
 #13 Purchase   │
                ▼
-#15 Persistence schema (FlashSale / Product / Purchase)   ← next
+#15 Persistence schema (FlashSale / Product / Purchase)   ← done (PR #102)
       ↓
-#16 Purchase uniqueness constraint UNIQUE(flash_sale_id, user_id)
+#16 Purchase uniqueness constraint UNIQUE(flash_sale_id, user_id)   ← next
       ↓
 #17 Repository ports
       ↓
@@ -136,8 +137,8 @@ Intended implementation sequence after domain models:
 Notes:
 
 - The uniqueness constraint is specifically on **Purchase**: `UNIQUE(flash_sale_id, user_id)`. It prevents duplicate purchases; it does **not** by itself make stock reservation concurrency-safe. Atomic reservation and oversell protection are owned by #19–#20.
-- Exact implementation details for #16–#20 are deferred until those tickets are planned; ownership boundaries above should not need rediscovery. The detailed `#15` contract is below (`#11`–`#14` contracts remain above/earlier in this file).
-- **Temporary identity-normalization inconsistency:** `#11` `FlashSale` and `#13` `Purchase` **preserve** non-trimmed IDs; `#12` `Product` **trims** `id` / `name` / provided `description`. This is an **acknowledged cross-entity inconsistency, not a desired domain convention**. Until a dedicated identity-normalization ticket resolves it, each entity must preserve its existing contract. New tickets must **not** silently normalize or de-normalize IDs for consistency — including `#15` (persist IDs exactly as supplied by domain/app; do not modify `FlashSale` ID normalization).
+- Exact implementation details for #17–#20 are deferred until those tickets are planned; ownership boundaries above should not need rediscovery. The detailed `#16` contract is below (`#11`–`#15` contracts remain above/earlier in this file).
+- **Temporary identity-normalization inconsistency:** `#11` `FlashSale` and `#13` `Purchase` **preserve** non-trimmed IDs; `#12` `Product` **trims** `id` / `name` / provided `description`. This is an **acknowledged cross-entity inconsistency, not a desired domain convention**. Until a dedicated identity-normalization ticket resolves it, each entity must preserve its existing contract. New tickets must **not** silently normalize or de-normalize IDs for consistency — including `#16` (persist IDs exactly as supplied by domain/app; do not modify `FlashSale` ID normalization). Uniqueness compares exact stored strings.
 
 ## Target package tree (after #14)
 
@@ -1220,6 +1221,172 @@ origin/main (EPIC-01 + #11 + #12 + #13 + #14 merged at 350dedf+)
     → commit: <type>: <MESSAGE>
 ```
 
+## #16 — Add unique purchase constraint (detailed contract)
+
+### Issue acceptance criteria
+
+From GitHub [#16](https://github.com/rexescario-dev/flash-sale-system/issues/16), interpreted for this contract:
+
+- `UNIQUE(flash_sale_id, user_id)` exists in the database as a database-enforced unique constraint/invariant (PostgreSQL may expose this as a unique constraint and/or unique index depending on Prisma-generated DDL — tests assert the uniqueness invariant via catalog metadata, not a specific object type)
+- Duplicate inserts for the same `(flash_sale_id, user_id)` pair fail at the DB layer
+
+### Design interpretation for #16
+
+- Enforce the one-purchase-per-user-per-flash-sale invariant at the **PostgreSQL** layer for `purchases`, aligning with the `#13` documented domain rule and the `#15` deferral of uniqueness.
+- Deliver via **Prisma-first** schema change in `apps/api/prisma/schema.prisma`, then **exactly one new append-only** Prisma migration after the merged `#15` migration (`20260727005938_init_flash_sale_schema`). **Do not** rewrite, squash, or regenerate the `#15` migration.
+- Replace the `#15` non-unique `@@index([flashSaleId])` with `@@unique([flashSaleId, userId])`. The resulting unique B-tree index on `(flash_sale_id, user_id)` also supports leftmost-prefix lookups on `flash_sale_id`, so the single-column index is redundant and must be removed in the same change.
+- **Required migration SQL review gate:** after `prisma migrate` creates the migration (`--create-only` or equivalent), inspect the generated SQL. Stop/fail the ticket if Prisma generates unexpected DDL (for example: fails to drop the non-unique `purchases(flash_sale_id)` index, adds uniqueness on the wrong column order, renames unrelated objects, or rewrites `#15` artifacts). Only then apply via `prisma migrate deploy` (or the workspace’s established deploy path) and run tests.
+- Prove both **catalog shape** and **runtime enforcement** (see Testing). Assert the uniqueness invariant by **ordered columns + uniqueness properties** in catalog metadata, not by Prisma-generated constraint/index names and not by assuming a specific PostgreSQL object type (constraint vs unique index). Do **not** introduce an explicit Prisma `map:` constraint name unless a project-wide naming convention already requires it (none today).
+- Behavioral failure for a repeated exact `(flashSaleId, userId)` pair is asserted as Prisma **`P2002`** / PostgreSQL unique violation. The behavioral suite must also prove the constraint is **composite** (see Testing). Do **not** map that to `ALREADY_PURCHASED` or any typed repository/application error in `#16` (`#18` / `#20`).
+- **No repositories, mappers, GraphQL, or Redis client** in `#16`.
+- **No domain package changes** in `#16` (no Purchase uniqueness helpers; no `ALREADY_PURCHASED`; no FlashSale ID normalization changes).
+- Status remains derived via `FlashSale.getStatus` — no persisted status column.
+
+### Locked decisions (#16)
+
+| Decision                                       | Choice                                                                                         |
+| ---------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Composite uniqueness                           | `@@unique([flashSaleId, userId])` → database-enforced uniqueness on `(flash_sale_id, user_id)` |
+| Column order                                   | `(flash_sale_id, user_id)` — not `(user_id, flash_sale_id)`                                    |
+| Redundant `#15` index                          | Remove `@@index([flashSaleId])` / drop non-unique `purchases(flash_sale_id)` index             |
+| Standalone `user_id` index introduced by `#16` | **None**                                                                                       |
+| Delivery approach                              | Prisma-first schema; one new append-only migration; required SQL review before apply           |
+| `#15` migration                                | Immutable                                                                                      |
+| Catalog identification                         | By ordered columns + uniqueness metadata; not by generated name or assumed object type         |
+| Proof                                          | Catalog + behavioral (duplicate pair + composite cross-pair)                                   |
+| Behavioral failure assertion                   | Prisma `P2002` / unique violation for repeated `(flashSaleId, userId)`                         |
+| `ALREADY_PURCHASED` mapping                    | Deferred to `#18` / `#20`                                                                      |
+| Persistence semantics                          | Unchanged from `#15`; `#16` introduces no trimming or normalization                            |
+| Persisted status                               | **None**                                                                                       |
+| CI                                             | Reuse existing dedicated `schema-test` job (migrate deploy + schema tests against PostgreSQL)  |
+
+### Target Prisma `Purchase` model (after #16)
+
+`Product` and `FlashSale` models remain as in the `#15` contract. Only `Purchase` index/unique declarations change:
+
+```prisma
+model Purchase {
+  id          String   @id
+  flashSaleId String   @map("flash_sale_id")
+  userId      String   @map("user_id")
+  purchasedAt DateTime @db.Timestamptz(3) @map("purchased_at")
+  createdAt   DateTime @default(now()) @db.Timestamptz(3) @map("created_at")
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3) @map("updated_at")
+
+  flashSale FlashSale @relation(fields: [flashSaleId], references: [id], onDelete: Restrict)
+
+  @@unique([flashSaleId, userId])
+  @@map("purchases")
+}
+```
+
+**Index rationale:** PostgreSQL can use the unique index on `(flash_sale_id, user_id)` for predicates filtering by the leftmost prefix `flash_sale_id`. Keeping `@@index([flashSaleId])` would create a redundant index with extra storage and write overhead. `#16` leaves the database in this intended final state — no follow-up cleanup ticket.
+
+**Not equivalent:** a unique index on `(user_id, flash_sale_id)` would enforce the same uniqueness set but would **not** be the intended sale-scoped lookup shape. Catalog tests must assert ordered columns `[flash_sale_id, user_id]`.
+
+### Migration (#16)
+
+`#16` ships **exactly one new** Prisma migration appended after `#15`.
+
+**Expected migration scope (only these intended index/unique changes):**
+
+1. Drop the existing non-unique index on `purchases(flash_sale_id)` created by `#15` (Prisma name from `#15`: `purchases_flash_sale_id_idx`).
+2. Add database-enforced uniqueness on ordered columns `(flash_sale_id, user_id)` (Prisma may emit `CREATE UNIQUE INDEX` and/or a unique constraint for `@@unique` — either is acceptable if the invariant is enforced).
+3. **No** unrelated table, column, foreign key, CHECK, or index changes.
+
+**Migration preservation rules:**
+
+> Never delete, regenerate, squash, or replace the `#15` migration to “fold in” uniqueness. `#16` is append-only relative to `main`.
+
+> The generated `#16` migration SQL is a review gate artifact: unexpected DDL (anything outside the expected migration scope above) is a stop condition, not something to apply blindly.
+
+### Testing (#16)
+
+Extend the existing PostgreSQL-backed schema/persistence tests under `apps/api/test/schema/` (same `test:schema` / `schema-test` CI path as `#15`). Tests may use `PrismaClient` directly for inserts; they must **not** introduce repositories, mappers, or application error types.
+
+Required coverage after `prisma migrate deploy`:
+
+**Catalog**
+
+- A database-enforced uniqueness invariant exists on `purchases` whose **ordered** columns are exactly `[flash_sale_id, user_id]` (assert via catalog metadata that proves uniqueness on that ordered column set; do not require a specific PostgreSQL object type of “constraint” vs “unique index”).
+- No non-unique index remains on `purchases` whose ordered columns are exactly `[flash_sale_id]`.
+- Do **not** hard-code Prisma-generated names such as `purchases_flash_sale_id_user_id_key` as the primary identification strategy.
+- `#16` must not introduce a new standalone index on `(user_id)` alone.
+
+**Behavioral**
+
+1. Seed a minimal valid graph: `Product` → `FlashSale` (and a second flash sale if needed for cross-pair coverage).
+2. Insert first `Purchase` with exact pair `(flashSaleId = X, userId = Y)` — succeeds.
+3. Insert a second `Purchase` with the same exact pair `(flashSaleId = X, userId = Y)` but a different `id` — fails with Prisma **`P2002`** (or equivalent unique-violation signal from the client used in the test).
+4. Prove the constraint is **composite**, not accidental single-column uniqueness: at least one cross-pair insert must succeed. Recommended minimum:
+   - `(flashSaleId = X, userId = Z)` succeeds (different user, same flash sale), **and/or**
+   - `(flashSaleId = W, userId = Y)` succeeds (same user, different flash sale).
+5. Do **not** assert `ALREADY_PURCHASED`, repository error codes, GraphQL errors, or purchase-flow outcomes.
+
+**Ticket-boundary notes**
+
+- `#16` owns positive uniqueness + removal of the redundant single-column index.
+- `#18` owns mapping uniqueness violations to typed repository/infrastructure errors.
+- `#20` owns translating that into the purchase outcome `ALREADY_PURCHASED`.
+- Concurrent multi-client oversell / reservation races remain `#19`–`#20` (a sequential duplicate insert plus composite cross-pair coverage is sufficient for `#16`).
+
+Update any `#15` schema assertions that assumed a non-unique `purchases(flash_sale_id)` index as the sale-scoped access path so they remain accurate after the unique composite replaces it (presence of an index usable for `flash_sale_id` lookups may still hold via the unique index; absence of a standalone non-unique `(flash_sale_id)` index becomes a `#16` requirement).
+
+### CI (#16)
+
+Reuse the dedicated `schema-test` job introduced in `#15`:
+
+1. Provision PostgreSQL
+2. Set `DATABASE_URL`
+3. Install workspace deps
+4. `prisma generate` + `prisma migrate deploy` for `apps/api` (must apply `#15` then `#16`)
+5. Run schema/persistence verification tests (`pnpm --filter api test:schema`)
+
+No new CI job is required unless the workspace script layout changes. Keep lint / typecheck / unit-test / build jobs DB-independent.
+
+### Explicitly out of #16
+
+| Concern                                                       | Owner                                                  |
+| ------------------------------------------------------------- | ------------------------------------------------------ |
+| Rewrite / squash `#15` migration                              | Forbidden                                              |
+| Repository ports                                              | `#17`                                                  |
+| Prisma repository adapters / uniqueness → typed repo error    | `#18`                                                  |
+| Typed `ALREADY_PURCHASED` purchase outcome                    | `#20`                                                  |
+| Purchase uniqueness helpers in `@flash-sale/domain`           | Not in `#16` (owned past `#13`; not `#16`)             |
+| Atomic inventory reservation                                  | `#19`                                                  |
+| Transactional purchase flow / concurrency oversell tests      | `#20`                                                  |
+| Persisted `status` column                                     | Not in EPIC-02 (status is derived)                     |
+| Domain entity / FlashSale ID normalization alignment          | Dedicated follow-up; not `#16`                         |
+| GraphQL purchase APIs                                         | EPIC-03                                                |
+| Redis client                                                  | EPIC-04                                                |
+| Explicit Prisma `map:` unique constraint name (naming policy) | Not required for `#16`                                 |
+| Standalone `@@index([userId])`                                | Deferred until a user-purchase listing use case exists |
+
+### Definition of Done (#16)
+
+- Implementation complete for this issue only
+- `schema.prisma` has `@@unique([flashSaleId, userId])` and no `@@index([flashSaleId])` on `Purchase`
+- Exactly one new append-only migration after `#15`; generated SQL reviewed and accepted before deploy (scope limited to dropping the redundant `(flash_sale_id)` index and adding uniqueness on `(flash_sale_id, user_id)`)
+- Catalog tests prove unique ordered `(flash_sale_id, user_id)` and absence of standalone non-unique `(flash_sale_id)` index
+- Behavioral tests prove: repeated exact `(flash_sale_id, user_id)` fails with Prisma `P2002` / unique violation, and the constraint is composite (cross-pair purchase still succeeds)
+- Existing `schema-test` CI path remains green against PostgreSQL with both migrations applied
+- ESLint and typecheck pass where applicable
+- No unrelated changes (no repos/mappers; no GraphQL; no Redis; no domain uniqueness helpers / `ALREADY_PURCHASED`; no FlashSale ID normalization changes)
+- If commits are authorized, commit messages follow `<type>: <MESSAGE>` (no `Co-authored-by`)
+
+### Pre-implementation sequencing (#16)
+
+```text
+origin/main (EPIC-01 + #11–#15 merged at 8e64323+)
+    → sync local checkout
+    → finalize this umbrella spec with #16 contract
+    → write implementation plan
+    → implement #16 on a feature branch
+    → generate one migration; REQUIRED SQL review gate
+    → migrate deploy + schema-test + workspace quality gates
+    → commit: <type>: <MESSAGE>
+```
+
 ## Epic success criteria (from #82)
 
 - Sale status rules are enforced in the domain
@@ -1227,4 +1394,4 @@ origin/main (EPIC-01 + #11 + #12 + #13 + #14 merged at 350dedf+)
 - Inventory reservation is atomic and transactional
 - No overselling under concurrent load in integration tests
 
-Child acceptance criteria remain on the linked issues; this spec does not duplicate them beyond the #11, #12, #13, #14, and #15 contracts above.
+Child acceptance criteria remain on the linked issues; this spec does not duplicate them beyond the #11, #12, #13, #14, #15, and #16 contracts above.
