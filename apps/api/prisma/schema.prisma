@@ -46,6 +46,6 @@ model Purchase {
 
   flashSale FlashSale @relation(fields: [flashSaleId], references: [id], onDelete: Restrict)
 
-  @@index([flashSaleId])
+  @@unique([flashSaleId, userId])
   @@map("purchases")
 }
