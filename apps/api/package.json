@@ -9,8 +9,10 @@
     "lint": "eslint \"{src,test}/**/*.ts\"",
     "typecheck": "pnpm prisma:generate && tsc -p tsconfig.json --noEmit --incremental false",
     "test": "jest",
+    "test:schema": "DATABASE_URL=${DATABASE_URL:-postgresql://flash_sale:flash_sale_dev@localhost:5432/flash_sale} jest --config jest.schema.config.cjs --runInBand",
     "prisma:generate": "DATABASE_URL=${DATABASE_URL:-postgresql://flash_sale:flash_sale_dev@localhost:5432/flash_sale} prisma generate",
-    "prisma:migrate": "prisma migrate dev"
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy"
   },
   "dependencies": {
     "@flash-sale/domain": "workspace:*",

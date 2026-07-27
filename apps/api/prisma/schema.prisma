@@ -6,3 +6,46 @@ datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+model Product {
+  id          String   @id
+  name        String
+  description String?
+  createdAt   DateTime @default(now()) @db.Timestamptz(3) @map("created_at")
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3) @map("updated_at")
+
+  flashSales FlashSale[]
+
+  @@map("products")
+}
+
+model FlashSale {
+  id             String   @id
+  productId      String   @map("product_id")
+  startsAt       DateTime @db.Timestamptz(3) @map("starts_at")
+  endsAt         DateTime @db.Timestamptz(3) @map("ends_at")
+  totalStock     Int      @map("total_stock")
+  remainingStock Int      @map("remaining_stock")
+  createdAt      DateTime @default(now()) @db.Timestamptz(3) @map("created_at")
+  updatedAt      DateTime @updatedAt @db.Timestamptz(3) @map("updated_at")
+
+  product   Product    @relation(fields: [productId], references: [id], onDelete: Restrict)
+  purchases Purchase[]
+
+  @@index([productId])
+  @@map("flash_sales")
+}
+
+model Purchase {
+  id          String   @id
+  flashSaleId String   @map("flash_sale_id")
+  userId      String   @map("user_id")
+  purchasedAt DateTime @db.Timestamptz(3) @map("purchased_at")
+  createdAt   DateTime @default(now()) @db.Timestamptz(3) @map("created_at")
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3) @map("updated_at")
+
+  flashSale FlashSale @relation(fields: [flashSaleId], references: [id], onDelete: Restrict)
+
+  @@index([flashSaleId])
+  @@map("purchases")
+}
