@@ -5,6 +5,7 @@ import { Prisma } from '@prisma/client';
 
 import type { PrismaService } from '../prisma/prisma.service';
 
+import { createPrismaPersistenceContext } from '../prisma/prisma-persistence-context';
 import { PrismaPurchaseRepository } from './prisma-purchase.repository';
 
 function buildRow(overrides: Partial<PrismaPurchase> = {}): PrismaPurchase {
@@ -141,5 +142,30 @@ describe('PrismaPurchaseRepository', () => {
     await expect(repo.findByFlashSaleAndUser(flashSaleId, userId)).rejects.toMatchObject({
       code: 'EMPTY_ID',
     });
+  });
+
+  it('save uses the transaction-bound client when PersistenceContext is provided', async () => {
+    const rootCreate = jest.fn();
+    const txCreate = jest.fn().mockResolvedValue({});
+    const prisma = {
+      purchase: { create: rootCreate, findUnique: jest.fn() },
+    } as unknown as PrismaService;
+    const repo = new PrismaPurchaseRepository(prisma);
+    const ctx = createPrismaPersistenceContext({
+      purchase: { create: txCreate },
+    } as never);
+
+    await repo.save(
+      Purchase.create({
+        flashSaleId: 'sale-1' as FlashSaleId,
+        id: 'purchase-1' as PurchaseId,
+        userId: 'user-1' as UserId,
+        purchasedAt: new Date('2026-07-28T12:00:00.000Z'),
+      }),
+      ctx,
+    );
+
+    expect(txCreate).toHaveBeenCalled();
+    expect(rootCreate).not.toHaveBeenCalled();
   });
 });
