@@ -1,5 +1,6 @@
 import {
   type FlashSaleId,
+  type PersistenceContext,
   type Purchase,
   PurchaseConflictError,
   type PurchaseRepository,
@@ -8,6 +9,7 @@ import {
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 
+import { resolvePrismaClient } from '../prisma/prisma-persistence-context';
 import { PrismaService } from '../prisma/prisma.service';
 import { PurchaseMapper } from './purchase.mapper';
 
@@ -50,9 +52,12 @@ export class PrismaPurchaseRepository implements PurchaseRepository {
     return PurchaseMapper.toDomain(row);
   }
 
-  async save(purchase: Purchase): Promise<void> {
+  async save(purchase: Purchase, ctx?: PersistenceContext): Promise<void> {
+    const db =
+      ctx === undefined ? resolvePrismaClient(this.prisma) : resolvePrismaClient(this.prisma, ctx);
+
     try {
-      await this.prisma.purchase.create({
+      await db.purchase.create({
         data: PurchaseMapper.toPersistence(purchase),
       });
     } catch (error) {
