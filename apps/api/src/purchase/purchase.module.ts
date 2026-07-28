@@ -4,6 +4,7 @@ import { Module } from '@nestjs/common';
 import { FlashSaleModule } from '../flash-sale/flash-sale.module';
 import { PrismaPurchaseRepository } from './prisma-purchase.repository';
 import { PurchaseFlowService } from './purchase-flow.service';
+import { PurchaseResolver } from './purchase.resolver';
 
 @Module({
   exports: [PURCHASE_FLOW, PURCHASE_REPOSITORY],
@@ -11,6 +12,7 @@ import { PurchaseFlowService } from './purchase-flow.service';
   providers: [
     PrismaPurchaseRepository,
     PurchaseFlowService,
+    PurchaseResolver,
     {
       provide: PURCHASE_FLOW,
       useExisting: PurchaseFlowService,
