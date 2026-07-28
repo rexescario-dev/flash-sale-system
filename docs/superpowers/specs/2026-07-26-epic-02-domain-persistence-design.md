@@ -1,13 +1,13 @@
 # EPIC-02 — Flash Sale Domain & Persistence (Design Spec)
 
-**Status:** Draft (#18 purchase repository contract — pending review)
-**Date:** 2026-07-26 (updated 2026-07-28 for #18)
+**Status:** Draft (#19 atomic inventory reservation contract — pending review)
+**Date:** 2026-07-26 (updated 2026-07-28 for #19)
 **Epic:** [EPIC-02 #82](https://github.com/rexescario-dev/flash-sale-system/issues/82)
-**Next implementation ticket:** [#18 — Implement purchase repository](https://github.com/rexescario-dev/flash-sale-system/issues/18)
-**Completed detailed contracts:** [#11 — FlashSale](https://github.com/rexescario-dev/flash-sale-system/issues/11) (merged via PR #98), [#12 — Product](https://github.com/rexescario-dev/flash-sale-system/issues/12) (merged via PR #99), [#13 — Purchase](https://github.com/rexescario-dev/flash-sale-system/issues/13) (merged via PR #100), [#14 — Sale status rules](https://github.com/rexescario-dev/flash-sale-system/issues/14) (merged via PR #101), [#15 — Database schema](https://github.com/rexescario-dev/flash-sale-system/issues/15) (merged via PR #102), [#16 — Unique purchase constraint](https://github.com/rexescario-dev/flash-sale-system/issues/16) (merged via PR #103), [#17 — Flash-sale repository](https://github.com/rexescario-dev/flash-sale-system/issues/17) (merged via PR #104 at `432c142+`)
+**Next implementation ticket:** [#19 — Implement atomic inventory reservation](https://github.com/rexescario-dev/flash-sale-system/issues/19)
+**Completed detailed contracts:** [#11 — FlashSale](https://github.com/rexescario-dev/flash-sale-system/issues/11) (merged via PR #98), [#12 — Product](https://github.com/rexescario-dev/flash-sale-system/issues/12) (merged via PR #99), [#13 — Purchase](https://github.com/rexescario-dev/flash-sale-system/issues/13) (merged via PR #100), [#14 — Sale status rules](https://github.com/rexescario-dev/flash-sale-system/issues/14) (merged via PR #101), [#15 — Database schema](https://github.com/rexescario-dev/flash-sale-system/issues/15) (merged via PR #102), [#16 — Unique purchase constraint](https://github.com/rexescario-dev/flash-sale-system/issues/16) (merged via PR #103), [#17 — Flash-sale repository](https://github.com/rexescario-dev/flash-sale-system/issues/17) (merged via PR #104 at `432c142+`), [#18 — Purchase repository](https://github.com/rexescario-dev/flash-sale-system/issues/18) (merged via PR #105 at `56f5a3e+`)
 **Child issues:** #11–#20
 **Repository:** `rexescario-dev/flash-sale-system`
-**Depends on:** EPIC-01 (#81), #11–#17 merged to `main`
+**Depends on:** EPIC-01 (#81), #11–#18 merged to `main`
 
 ## Goal
 
@@ -28,10 +28,11 @@ Share intentional domain concepts in `@flash-sale/domain`. Keep Prisma, NestJS, 
 | Shared types          | `@flash-sale/types` remains non-domain (transport/contracts only when both apps need them)                                                                                                                             |
 | Prisma                | Stays in `apps/api`; schema/migrations/client local to the API                                                                                                                                                         |
 | Mapping               | Prisma ↔ domain mapping lives outside `@flash-sale/domain`                                                                                                                                                             |
-| Repository ports      | **Locked in #17:** ports live in `@flash-sale/domain` as thin interfaces + Nest injection tokens (no Prisma/Nest types on the port). `#18` follows the same location for `PurchaseRepository`.                         |
+| Repository ports      | **Locked in #17:** ports live in `@flash-sale/domain` as thin interfaces + Nest injection tokens (no Prisma/Nest types on the port). `#18`/`#19` follow the same location.                                             |
 | Repository adapters   | Prisma implementations, mappers, and Nest feature modules always in `apps/api`                                                                                                                                         |
-| #17 load style        | `FlashSaleRepository.findById` → `Promise<FlashSale \| null>`; Prisma read adapter + mapper/`reconstitute`; no writes; unit + PostgreSQL integration proof                                                             |
+| #17 load style        | `FlashSaleRepository.findById` → `Promise<FlashSale \| null>`; Prisma read adapter + mapper/`reconstitute`; **read-only**; unit + PostgreSQL integration proof                                                         |
 | #18 purchase repo     | `PurchaseRepository.save` + `findByFlashSaleAndUser`; domain `PurchaseConflictError` for composite uniqueness only; `Purchase.reconstitute`; dedicated `apps/api/src/purchase/` Nest slice                             |
+| #19 reservation       | Dedicated `FlashSaleReservation.tryReserve` → `Promise<boolean>`; `$executeRaw` conditional `UPDATE`; `FlashSaleRepository` stays read-only; Nest wiring extends `FlashSaleModule`; concurrent PG proof                |
 | GraphQL purchase APIs | Out of EPIC-02; deferred to EPIC-03                                                                                                                                                                                    |
 | Redis client          | Out of EPIC-02; deferred to EPIC-04 (Compose service already exists)                                                                                                                                                   |
 | #11 modeling style    | Rich `FlashSale` class with private state, `create` / `reconstitute`, getters                                                                                                                                          |
@@ -40,16 +41,16 @@ Share intentional domain concepts in `@flash-sale/domain`. Keep Prisma, NestJS, 
 | #14 status style      | Instance method `FlashSale.getStatus(nowUtc)`; string-union `FlashSaleStatus`; temporal-first precedence; no purchase-gate helpers                                                                                     |
 | #15 schema style      | Prisma-first in `apps/api`; domain-aligned columns; app-supplied `String @id`; snake_case SQL maps; `timestamptz(3)`; `onDelete: Restrict`; FK indexes; audit timestamps; named CHECKs via edited migration            |
 | #16 uniqueness style  | Prisma-first `@@unique([flashSaleId, userId])`; drop redundant `@@index([flashSaleId])`; one new append-only migration; catalog + behavioral proof; no `ALREADY_PURCHASED` mapping                                     |
-| Value objects         | Not introduced in #11–#18 (`SaleWindow`, `Stock` deferred until justified)                                                                                                                                             |
-| Spec shape            | EPIC-02 umbrella architecture + detailed #11–#18 contracts                                                                                                                                                             |
+| Value objects         | Not introduced in #11–#19 (`SaleWindow`, `Stock` deferred until justified)                                                                                                                                             |
+| Spec shape            | EPIC-02 umbrella architecture + detailed #11–#19 contracts                                                                                                                                                             |
 
 ## Dependency direction
 
 ```text
 apps/api
-  ├── flash-sale/ (Nest feature slice)     (#17: mapper + Prisma adapter + module)
+  ├── flash-sale/ (Nest feature slice)     (#17 read adapter; #19 reservation adapter; shared module)
   ├── purchase/   (Nest feature slice)     (#18: mapper + Prisma adapter + module)
-  ├── application / use cases              (later tickets; not #17/#18)
+  ├── application / use cases              (later tickets; not #17/#18/#19)
   ├── NestJS
   ├── Prisma
   ├── @flash-sale/types                    (non-domain transport/contracts)
@@ -59,15 +60,15 @@ apps/api
 @flash-sale/domain
   └── ZERO runtime dependencies
       ├── entities / domain errors (incl. PurchaseConflictError)
-      ├── repository ports (interfaces + injection tokens)
+      ├── repository / reservation ports (interfaces + injection tokens)
       ├── no NestJS
       ├── no Prisma
       └── no Redis
 
-PrismaFlashSaleRepository (apps/api)          PrismaPurchaseRepository (apps/api)
-        │ implements FlashSaleRepository              │ implements PurchaseRepository
-        ▼                                             ▼
-   PostgreSQL                                    PostgreSQL
+PrismaFlashSaleRepository (apps/api)     PrismaFlashSaleReservation (apps/api)     PrismaPurchaseRepository (apps/api)
+        │ implements FlashSaleRepository         │ implements FlashSaleReservation            │ implements PurchaseRepository
+        ▼                                        ▼                                            ▼
+   PostgreSQL (read)                    PostgreSQL (conditional UPDATE)                  PostgreSQL
 ```
 
 `@flash-sale/types` does **not** depend on `@flash-sale/domain`. The `depends on` edge is from `apps/api` → `@flash-sale/domain`.
@@ -85,19 +86,21 @@ Prisma record
 
 Domain entities do not know Prisma. Mapping is always outside `@flash-sale/domain`.
 
-### Repository ports (#17–#18)
+Atomic stock reservation (`#19`) is a **command port**, not a mapper/`reconstitute` path: one conditional SQL `UPDATE` answers success via affected-row count.
+
+### Repository / reservation ports (#17–#19)
 
 **Port location is locked by #17:**
 
 | Concern                         | Location                                                                  |
 | ------------------------------- | ------------------------------------------------------------------------- |
-| Repository port (interface)     | `@flash-sale/domain`                                                      |
+| Repository / reservation port   | `@flash-sale/domain`                                                      |
 | Nest injection token for a port | `@flash-sale/domain` (exported `Symbol` beside the interface)             |
 | Prisma adapter                  | `apps/api` (Nest feature slice, e.g. `src/flash-sale/`)                   |
-| Prisma ↔ domain mapper          | `apps/api` (same feature slice)                                           |
+| Prisma ↔ domain mapper          | `apps/api` (same feature slice; N/A for `#19` reservation)                |
 | Nest composition module         | `apps/api` (minimal provider/export wiring; no controllers/use cases yet) |
 
-`#17` introduced `FlashSaleRepository` + `PrismaFlashSaleRepository` (read/`findById` only). `#18` introduces `PurchaseRepository` + Prisma adapter (`save` + `findByFlashSaleAndUser`) and maps **composite** uniqueness violations to domain-owned `PurchaseConflictError`. `#20` owns translating that into `ALREADY_PURCHASED` purchase outcomes.
+`#17` introduced `FlashSaleRepository` + `PrismaFlashSaleRepository` (**read**/`findById` only — stays read-only). `#18` introduced `PurchaseRepository` + Prisma adapter (`save` + `findByFlashSaleAndUser`) and maps **composite** uniqueness violations to domain-owned `PurchaseConflictError`. `#19` introduces `FlashSaleReservation` + Prisma `$executeRaw` conditional decrement (boolean success). `#20` owns translating purchase uniqueness into `ALREADY_PURCHASED` and composing reservation + purchase insert in a transaction.
 
 ## EPIC-02 roadmap
 
@@ -132,24 +135,24 @@ Intended implementation sequence after domain models:
       ↓
 #17 FlashSaleRepository port + Prisma findById load path   ← done (PR #104)
       ↓
-#18 PurchaseRepository + uniqueness → PurchaseConflictError   ← next
+#18 PurchaseRepository + uniqueness → PurchaseConflictError   ← done (PR #105)
       ↓
-#19 Atomic stock reservation
+#19 Atomic stock reservation   ← next
       ↓
 #20 Transactional purchase flow
       ├── status / purchase eligibility (uses getStatus; no purchase-gate helpers in #14)
       ├── ALREADY_PURCHASED
-      ├── reservation
-      └── concurrency safety
+      ├── reservation (composes #19)
+      └── concurrency safety (purchase txn)
 ```
 
 Notes:
 
-- The uniqueness constraint is specifically on **Purchase**: `UNIQUE(flash_sale_id, user_id)`. It prevents duplicate purchases; it does **not** by itself make stock reservation concurrency-safe. Atomic reservation and oversell protection are owned by #19–#20.
-- Exact implementation details for #19–#20 are deferred until those tickets are planned; ownership boundaries above should not need rediscovery. The detailed `#18` contract is below (`#11`–`#17` contracts remain above/earlier in this file).
-- **Temporary identity-normalization inconsistency:** `#11` `FlashSale` and `#13` `Purchase` **preserve** non-trimmed IDs; `#12` `Product` **trims** `id` / `name` / provided `description`. This is an **acknowledged cross-entity inconsistency, not a desired domain convention**. Until a dedicated identity-normalization ticket resolves it, each entity must preserve its existing contract. New tickets must **not** silently normalize or de-normalize IDs for consistency — including `#17`/`#18` (map/persist IDs exactly as stored; do not trim IDs in mappers). Uniqueness compares exact stored strings.
+- The uniqueness constraint is specifically on **Purchase**: `UNIQUE(flash_sale_id, user_id)`. It prevents duplicate purchases; it does **not** by itself make stock reservation concurrency-safe. Atomic reservation is owned by `#19`; full purchase-transaction oversell / `ALREADY_PURCHASED` composition is owned by `#20`.
+- Exact implementation details for `#20` are deferred until that ticket is planned; ownership boundaries above should not need rediscovery. The detailed `#19` contract is below (`#11`–`#18` contracts remain above/earlier in this file).
+- **Temporary identity-normalization inconsistency:** `#11` `FlashSale` and `#13` `Purchase` **preserve** non-trimmed IDs; `#12` `Product` **trims** `id` / `name` / provided `description`. This is an **acknowledged cross-entity inconsistency, not a desired domain convention**. Until a dedicated identity-normalization ticket resolves it, each entity must preserve its existing contract. New tickets must **not** silently normalize or de-normalize IDs for consistency — including `#17`/`#18`/`#19` (map/persist/query IDs exactly as stored; do not trim IDs). Uniqueness and reservation match exact stored strings.
 
-## Target package tree (after #18)
+## Target package tree (after #19)
 
 ```text
 packages/
@@ -164,7 +167,8 @@ packages/
         flash-sale.ts
         flash-sale.errors.ts
         flash-sale.spec.ts
-        flash-sale.repository.ts  # FlashSaleRepository + FLASH_SALE_REPOSITORY token (#17)
+        flash-sale.repository.ts   # FlashSaleRepository + FLASH_SALE_REPOSITORY (#17; read-only)
+        flash-sale.reservation.ts  # FlashSaleReservation + FLASH_SALE_RESERVATION (#19)
       product/
         product.ts
         product.errors.ts
@@ -181,12 +185,14 @@ packages/
 
 apps/api/
   src/
-    flash-sale/                   # Nest feature slice (#17)
+    flash-sale/                   # Nest feature slice (#17 + #19)
       flash-sale.mapper.ts
       flash-sale.mapper.spec.ts
       prisma-flash-sale.repository.ts
       prisma-flash-sale.repository.spec.ts
-      flash-sale.module.ts
+      prisma-flash-sale.reservation.ts
+      prisma-flash-sale.reservation.spec.ts
+      flash-sale.module.ts        # exports FLASH_SALE_REPOSITORY + FLASH_SALE_RESERVATION
     purchase/                     # Nest feature slice (#18)
       purchase.mapper.ts
       purchase.mapper.spec.ts
@@ -197,13 +203,14 @@ apps/api/
     app.module.ts                 # imports FlashSaleModule + PurchaseModule
   test/
     schema/                       # #15/#16 catalog + uniqueness behavioral tests
-    flash-sale/                   # #17 PostgreSQL integration round-trip
+    flash-sale/                   # #17 read round-trip + #19 reservation / concurrency
       prisma-flash-sale.repository.integration.spec.ts
+      prisma-flash-sale.reservation.integration.spec.ts
     purchase/                     # #18 PostgreSQL save/lookup/conflict integration
       prisma-purchase.repository.integration.spec.ts
 ```
 
-`#18` does **not** add a new package. Domain gains the purchase port, conflict error, and `reconstitute`; API gains the purchase feature slice + integration tests.
+`#19` does **not** add a new package or Nest module. Domain gains the reservation port + DI token; API extends the existing flash-sale feature slice + integration tests.
 
 ## #11 — FlashSale domain model (detailed contract)
 
@@ -1949,6 +1956,268 @@ origin/main (EPIC-01 + #11–#17 merged at 432c142+)
     → commit: <type>: <MESSAGE>
 ```
 
+## #19 — Implement atomic inventory reservation (detailed contract)
+
+### Issue acceptance criteria
+
+From GitHub [#19](https://github.com/rexescario-dev/flash-sale-system/issues/19), interpreted for this contract:
+
+- Inventory decrement is atomic with `remaining_stock > 0` and active time window → **one conditional SQL `UPDATE`** with `remaining_stock > 0` **and** half-open window `[starts_at, ends_at)` evaluated against caller-supplied `nowUtc`
+- No read-modify-write race pattern is used → **no** `SELECT` then mutate then `save`; success is solely `affected rows === 1`
+
+### Design interpretation for #19
+
+- Deliver a **dedicated reservation command port** separate from the read/`reconstitute` port.
+- **`FlashSaleRepository` stays read-only** (`findById` only). Do **not** add write methods to it.
+- **Port ownership:** `FlashSaleReservation` interface + Nest injection token live in `@flash-sale/domain`. Domain remains free of NestJS/Prisma/Redis and has **no runtime package dependencies**.
+- **Adapter ownership:** `PrismaFlashSaleReservation` lives in `apps/api/src/flash-sale/` and is registered from the existing `FlashSaleModule` (same Nest slice as `#17`).
+- **Success signal:** `tryReserve` returns `Promise<boolean>` — `true` iff exactly one row was updated; `false` for every expected miss (missing sale, outside window, sold out / zero stock). **No** failure-reason classification in `#19`.
+- **Concurrency:** PostgreSQL serializes the conditional `UPDATE`. `#19` proves no oversell for the reservation primitive under concurrent callers. Full purchase-transaction composition remains `#20`.
+- **Out of #19:** purchase insert, `PurchaseConflictError` / `ALREADY_PURCHASED`, GraphQL, Redis, controllers, application use cases, schema/migration edits, `FlashSale.reserve()` entity mutation, extending `FlashSaleRepository` with writes.
+- Approach: **thin domain command port + `$executeRaw` adapter in the existing FlashSale Nest slice**.
+
+### Locked decisions (#19)
+
+| Decision                | Choice                                                                                                                                                                                                                                                                                                                                     |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Port location           | `@flash-sale/domain` (`flash-sale.reservation.ts`)                                                                                                                                                                                                                                                                                         |
+| Port vs read repository | **Separate** `FlashSaleReservation`; `FlashSaleRepository` remains read-only                                                                                                                                                                                                                                                               |
+| DI token ownership      | `FLASH_SALE_RESERVATION` Symbol defined and exported from `@flash-sale/domain` (same file as the port; YAGNI for a separate `.token.ts`)                                                                                                                                                                                                   |
+| Port vs token roles     | `FlashSaleReservation` = domain port (compile-time); `FLASH_SALE_RESERVATION` = runtime Nest DI token only                                                                                                                                                                                                                                 |
+| Port method             | `tryReserve(flashSaleId, nowUtc): Promise<boolean>` only                                                                                                                                                                                                                                                                                   |
+| ID type on port         | Branded `FlashSaleId`                                                                                                                                                                                                                                                                                                                      |
+| Return on miss          | `false` (do **not** classify `NOT_FOUND` / `NOT_ACTIVE` / `SOLD_OUT`)                                                                                                                                                                                                                                                                      |
+| Business-outcome throws | **None** for expected reservation misses                                                                                                                                                                                                                                                                                                   |
+| `PurchaseConflictError` | **Not** used by `#19`                                                                                                                                                                                                                                                                                                                      |
+| `ALREADY_PURCHASED`     | **`#20` only**                                                                                                                                                                                                                                                                                                                             |
+| Atomicity mechanism     | Single parameterized Prisma `$executeRaw` conditional `UPDATE` (not `$executeRawUnsafe`; not Client `updateMany`)                                                                                                                                                                                                                          |
+| Window predicate        | Half-open `[starts_at, ends_at)` — `starts_at <= nowUtc AND ends_at > nowUtc` (matches `#14`)                                                                                                                                                                                                                                              |
+| Stock predicate         | `remaining_stock > 0` in the same `WHERE`; decrement `remaining_stock = remaining_stock - 1`                                                                                                                                                                                                                                               |
+| `updated_at`            | Set explicitly in the same `UPDATE` to the **same bound `nowUtc`** used for the window (do not mix DB `NOW()`)                                                                                                                                                                                                                             |
+| Invalid `nowUtc`        | Adapter input guard: if `Number.isNaN(nowUtc.getTime())`, throw `FlashSaleValidationError` with code `INVALID_NOW` **before** SQL (same `#14` code/type; do **not** move validation onto `FlashSale` or add a VO). **No** timezone conversion or Date normalization — caller `Date` used **as-is** for window predicates and `updated_at`. |
+| Return / affected rows  | `affectedRows === 1` → `true`; **`affectedRows !== 1` → `false`**                                                                                                                                                                                                                                                                          |
+| ID normalization        | Exact string match on `id`; do not trim (`FlashSaleId` brand is compile-time; runtime value is the stored scalar)                                                                                                                                                                                                                          |
+| Nest module             | Extend existing `FlashSaleModule`; register concrete adapter + `useExisting` token alias; export `FLASH_SALE_RESERVATION` alongside `FLASH_SALE_REPOSITORY`                                                                                                                                                                                |
+| Controllers / use cases | **None** in `#19`                                                                                                                                                                                                                                                                                                                          |
+| Schema / migrations     | **None** in `#19` (CHECK `remaining_stock >= 0` already from `#15` is defense-in-depth)                                                                                                                                                                                                                                                    |
+| Verification            | **Unit** = adapter control flow + errors; **integration** = authoritative SQL semantics (incl. success `updated_at === nowUtc`, failure `updated_at` unchanged on stock `= 0`, + `N > S` concurrency via `Promise.all`)                                                                                                                    |
+| Typecheck               | Turbo `typecheck` already depends on `^build` (workspace deps must build before typecheck; keep this invariant)                                                                                                                                                                                                                            |
+
+### Port contract
+
+`FlashSaleReservation` is the **domain command port**. `FLASH_SALE_RESERVATION` is its **runtime DI token**. The domain must **not** import Nest decorators on the port or token.
+
+Keep both in one file (`flash-sale.reservation.ts`) unless a later ticket justifies a split:
+
+```ts
+import type { FlashSaleId } from '../ids.js';
+
+/** Runtime Nest DI token for FlashSaleReservation. Owned by @flash-sale/domain. */
+export const FLASH_SALE_RESERVATION = Symbol('FLASH_SALE_RESERVATION');
+
+export interface FlashSaleReservation {
+  tryReserve(flashSaleId: FlashSaleId, nowUtc: Date): Promise<boolean>;
+}
+```
+
+Behavioral contract:
+
+- `tryReserve` attempts to atomically reserve **one** unit of stock for `flashSaleId` at absolute instant `nowUtc`.
+- Returns `true` iff the conditional `UPDATE` affected exactly one row (`affectedRows === 1`).
+- Returns `false` when `affectedRows !== 1` (typical miss: missing id, outside window, `remaining_stock === 0`). Callers must **not** treat `false` as a typed business outcome taxonomy in `#19`.
+- Does **not** hydrate a `FlashSale`, does **not** call `getStatus`, does **not** insert a `Purchase`.
+- Callers pass an already-branded `FlashSaleId`. Runtime blankness is not re-validated by the port; the adapter queries by the underlying string (exact match; no trim).
+- **`INVALID_NOW` ownership:** `FlashSaleReservation.tryReserve()` rejects an invalid `Date` with `FlashSaleValidationError(INVALID_NOW)`. The **adapter** performs this input guard before SQL so reservation never issues SQL with an invalid timestamp. Do **not** move this onto `FlashSale` or add a new VO for `#19`.
+- **`nowUtc` is used as-is:** only the existing `#14` valid-timestamp check (`Number.isNaN(nowUtc.getTime())`). Do **not** add timezone conversion, locale parsing, or other Date normalization in `#19`. The same caller `Date` is bound for window predicates and `updated_at`.
+
+### SQL contract (adapter)
+
+Authoritative statement (parameterized via Prisma tagged-template `$executeRaw`):
+
+```sql
+UPDATE flash_sales
+SET
+  remaining_stock = remaining_stock - 1,
+  updated_at = $nowUtc
+WHERE
+  id = $flashSaleId
+  AND starts_at <= $nowUtc
+  AND ends_at > $nowUtc
+  AND remaining_stock > 0
+```
+
+Then:
+
+```text
+affectedRows === 1 → true
+affectedRows !== 1 → false
+```
+
+Rules:
+
+- Use **`$executeRaw`** (tagged template) — **not** `$executeRawUnsafe`.
+- Bind the **same** `nowUtc` `Date` for the window predicates and `updated_at`.
+- Do **not** precede the `UPDATE` with a `SELECT` of `remaining_stock` for the success path.
+- Do **not** use Prisma Client `updateMany` / `update` for `#19` (locked to raw conditional `UPDATE` for an explicit DB-level contract and explicit `updated_at`).
+- Do **not** remap persistence errors into purchase/domain purchase outcomes.
+
+Illustrative adapter shape:
+
+```ts
+async tryReserve(flashSaleId: FlashSaleId, nowUtc: Date): Promise<boolean> {
+  if (Number.isNaN(nowUtc.getTime())) {
+    throw new FlashSaleValidationError('INVALID_NOW', 'FlashSale nowUtc must be a valid Date');
+  }
+
+  const affected = await this.prisma.$executeRaw`
+    UPDATE flash_sales
+    SET
+      remaining_stock = remaining_stock - 1,
+      updated_at = ${nowUtc}
+    WHERE
+      id = ${flashSaleId}
+      AND starts_at <= ${nowUtc}
+      AND ends_at > ${nowUtc}
+      AND remaining_stock > 0
+  `;
+
+  return affected === 1;
+}
+```
+
+### Nest wiring
+
+Extend the existing `#17` module — do **not** invent `FlashSaleReservationModule`:
+
+```ts
+@Module({
+  exports: [FLASH_SALE_REPOSITORY, FLASH_SALE_RESERVATION],
+  providers: [
+    PrismaFlashSaleRepository,
+    PrismaFlashSaleReservation,
+    {
+      provide: FLASH_SALE_REPOSITORY,
+      useExisting: PrismaFlashSaleRepository,
+    },
+    {
+      provide: FLASH_SALE_RESERVATION,
+      useExisting: PrismaFlashSaleReservation,
+    },
+  ],
+})
+export class FlashSaleModule {}
+```
+
+- Prefer `useExisting` so each concrete adapter is a first-class provider and the domain token aliases it.
+- `PrismaModule` remains `@Global()`; `FlashSaleModule` does not need to import or re-export Prisma.
+- `AppModule` already imports `FlashSaleModule` — no new app import required unless wiring was removed.
+- No controllers, resolvers, or application services in `#19`.
+
+### Public API surface (#19 delta)
+
+Export from `packages/domain/src/index.ts` (in addition to existing FlashSale / Purchase exports):
+
+- `FlashSaleReservation` (type)
+- `FLASH_SALE_RESERVATION` (runtime DI token — domain-owned Symbol; never redefine in `apps/api`)
+
+Do not export the Prisma reservation adapter or Nest module from `@flash-sale/domain`.
+
+### Testing (#19)
+
+**Verification split:**
+
+- **Unit tests** verify adapter **control flow and error behavior** (boolean mapping from affected-row count; `INVALID_NOW` without SQL).
+- **Integration tests** are **authoritative for SQL semantics** (window + stock predicates, decrement, `updated_at === nowUtc`, concurrent no-oversell). Invoking `$executeRaw` in a unit mock is **not** proof of SQL shape.
+
+**API unit (no DB)** — under `apps/api/src/flash-sale/prisma-flash-sale.reservation.spec.ts`, default API Jest suite:
+
+- Mock `PrismaService.$executeRaw` → `1` → `tryReserve` returns `true`
+- Mock `$executeRaw` → `0` (stands for `affected !== 1`) → returns `false`
+- Invalid `nowUtc` → throws `FlashSaleValidationError` with `code === 'INVALID_NOW'` and **does not** call `$executeRaw`
+- Do **not** assert brittle SQL-string equality in unit tests; do **not** require a fake `affected === 2` case
+
+**PostgreSQL integration — sequential** — under `apps/api/test/flash-sale/prisma-flash-sale.reservation.integration.spec.ts`, existing `jest.integration.config.cjs` / `pnpm --filter api test:integration`:
+
+Seed minimal `Product` → `FlashSale` graph (FK `Restrict`), then:
+
+| Case                       | Expected                                                                                                              |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Active window, stock `> 0` | `true`; `remaining_stock` decremented by 1; **`updated_at === nowUtc`** (fresh Prisma Client read after `tryReserve`) |
+| Stock `=== 1`              | `true`; stock becomes `0`                                                                                             |
+| Stock `=== 0`              | `false`; stock remains `0`; **`updated_at` unchanged** (fresh read; seed a distinct initial `updatedAt` ≠ `nowUtc`)   |
+| `nowUtc < startsAt`        | `false`                                                                                                               |
+| `nowUtc === startsAt`      | `true` (when stock `> 0`)                                                                                             |
+| `nowUtc === endsAt`        | `false`                                                                                                               |
+| `nowUtc > endsAt`          | `false`                                                                                                               |
+| Missing flash-sale id      | `false`                                                                                                               |
+
+`updatedAt` assertions must use a **fresh Prisma Client read after `tryReserve()`**. Do not infer `updatedAt` from the in-memory input or adapter return value — prove the database column was (or was not) written by the raw SQL `SET`. The stock `=== 0` failure case is the representative proof that `SET updated_at` shares the same `WHERE` guard as the stock decrement.
+
+Happy-path must assert both `remainingStock` and `updatedAt`. Invalid `nowUtc` is covered by unit tests; a duplicate integration case is **not** required.
+
+Cleanup in `afterEach` / `finally` consistent with `#17` / `#18` integration style.
+
+**PostgreSQL integration — concurrency** (same file or adjacent describe; still `#19` only):
+
+```text
+Initial remaining_stock = S
+N concurrent tryReserve(id, nowUtc) with N > S  (e.g. S=10, N=100)
+via Promise.all (database-level atomicity — not JS serialization)
+
+Assertions:
+- exactly S results are true
+- exactly N − S results are false
+- final remaining_stock === 0
+- remaining_stock never negative (final read + CHECK already present)
+```
+
+Do **not** rewrite the concurrency test as sequential awaits or add application-level locking. Do **not** insert purchases, assert `PurchaseConflictError`, or assert `ALREADY_PURCHASED` in `#19`.
+
+### CI (#19)
+
+Reuse the existing `schema-test` job sequence (Postgres 16 + migrate + `test:schema` + `test:integration`). Reservation integration specs ride the existing `test:integration` step — **no new CI job**. Keep lint / typecheck / unit-test / build DB-independent. Preserve Turbo `typecheck` → `^build` so workspace packages are built before dependent typecheck.
+
+### Explicitly out of #19
+
+| Concern                                            | Owner                          |
+| -------------------------------------------------- | ------------------------------ |
+| Purchase insert / uniqueness / `ALREADY_PURCHASED` | `#20`                          |
+| Transactional purchase flow / purchase-level races | `#20`                          |
+| Failure-reason taxonomy on `tryReserve`            | Not in `#19` (boolean only)    |
+| Write methods on `FlashSaleRepository`             | Not in `#19` (stays read-only) |
+| `FlashSale.reserve()` entity mutation              | Not in `#19`                   |
+| Controllers / GraphQL resolvers / use cases        | Later / EPIC-03                |
+| Redis client                                       | EPIC-04                        |
+| Schema / migration changes                         | Not in `#19` (schema done)     |
+| Remapping to `PurchaseConflictError`               | Not in `#19`                   |
+
+### Definition of Done (#19)
+
+- Implementation complete for this issue only
+- `FlashSaleReservation` + domain-owned `FLASH_SALE_RESERVATION` exported from `@flash-sale/domain`
+- `FlashSaleRepository` remains read-only (`findById` only)
+- Prisma adapter implements `tryReserve` via one parameterized `$executeRaw` conditional `UPDATE` (window + stock; explicit `updated_at = nowUtc`); returns `affected === 1` (`affected !== 1` → `false`)
+- Invalid `nowUtc` → adapter throws `FlashSaleValidationError` (`INVALID_NOW`) without executing SQL (not moved onto `FlashSale`)
+- Happy-path integration proves `updatedAt === nowUtc` via fresh Prisma Client read after `tryReserve`
+- Representative failure path (stock `= 0`) proves `updatedAt` unchanged via fresh read
+- `FlashSaleModule` registers/exports both tokens via `useExisting`
+- Unit (control flow/errors) + PostgreSQL sequential + focused concurrent (`N > S` via `Promise.all`) integration tests added and passing under existing `test` / `test:integration`
+- ESLint (incl. perfectionist) and typecheck pass; Turbo `^build` dependency preserved for typecheck
+- No unrelated changes (no GraphQL; no Redis; no `#20` purchase flow; no schema/migration edits; no purchase uniqueness mapping)
+- If commits are authorized, commit messages follow `<type>: <MESSAGE>` (no `Co-authored-by`); author `rex.escario.jr@gmail.com`
+
+### Pre-implementation sequencing (#19)
+
+```text
+origin/main (EPIC-01 + #11–#18 merged at 56f5a3e+)
+    → sync local checkout
+    → finalize this umbrella spec with #19 contract
+    → write implementation plan
+    → implement #19 on a feature branch
+    → unit + sequential + concurrent integration + workspace quality gates
+    → commit: <type>: <MESSAGE>
+```
+
 ## Epic success criteria (from #82)
 
 - Sale status rules are enforced in the domain
@@ -1956,4 +2225,4 @@ origin/main (EPIC-01 + #11–#17 merged at 432c142+)
 - Inventory reservation is atomic and transactional
 - No overselling under concurrent load in integration tests
 
-Child acceptance criteria remain on the linked issues; this spec does not duplicate them beyond the #11–#18 contracts above.
+Child acceptance criteria remain on the linked issues; this spec does not duplicate them beyond the #11–#19 contracts above. `#19` proves reservation-primitive concurrency; `#20` still owns full purchase-transaction concurrency and `ALREADY_PURCHASED`.

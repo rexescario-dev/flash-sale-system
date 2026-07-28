@@ -8,6 +8,8 @@ export type {
 } from './flash-sale/flash-sale.js';
 export { FLASH_SALE_REPOSITORY } from './flash-sale/flash-sale.repository.js';
 export type { FlashSaleRepository } from './flash-sale/flash-sale.repository.js';
+export { FLASH_SALE_RESERVATION } from './flash-sale/flash-sale.reservation.js';
+export type { FlashSaleReservation } from './flash-sale/flash-sale.reservation.js';
 export type { FlashSaleId, ProductId, PurchaseId, UserId } from './ids.js';
 export { ProductValidationError } from './product/product.errors.js';
 export type { ProductValidationErrorCode } from './product/product.errors.js';
