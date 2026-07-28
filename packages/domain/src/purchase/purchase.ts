@@ -9,6 +9,8 @@ export type PurchaseCreateProps = {
   purchasedAt: Date;
 };
 
+export type PurchaseReconstituteProps = PurchaseCreateProps;
+
 export class Purchase {
   private constructor(
     private readonly id: PurchaseId,
@@ -18,6 +20,18 @@ export class Purchase {
   ) {}
 
   static create(props: PurchaseCreateProps): Purchase {
+    Purchase.assertValid(props);
+    const timestamp = props.purchasedAt.getTime();
+    return new Purchase(props.id, props.flashSaleId, new Date(timestamp), props.userId);
+  }
+
+  static reconstitute(props: PurchaseReconstituteProps): Purchase {
+    Purchase.assertValid(props);
+    const timestamp = props.purchasedAt.getTime();
+    return new Purchase(props.id, props.flashSaleId, new Date(timestamp), props.userId);
+  }
+
+  private static assertValid(props: PurchaseCreateProps): void {
     if (props.id.trim().length === 0) {
       throw new PurchaseValidationError('EMPTY_ID', 'Purchase id must be non-empty');
     }
@@ -40,8 +54,6 @@ export class Purchase {
         'Purchase purchasedAt must be a valid Date',
       );
     }
-
-    return new Purchase(props.id, props.flashSaleId, new Date(timestamp), props.userId);
   }
 
   getFlashSaleId(): FlashSaleId {
