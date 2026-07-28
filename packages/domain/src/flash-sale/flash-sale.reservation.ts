@@ -1,8 +1,9 @@
 import type { FlashSaleId } from '../ids.js';
+import type { PersistenceContext } from '../persistence-context.js';
 
 /** Runtime Nest DI token for FlashSaleReservation. Owned by @flash-sale/domain. */
 export const FLASH_SALE_RESERVATION = Symbol('FLASH_SALE_RESERVATION');
 
 export interface FlashSaleReservation {
-  tryReserve(flashSaleId: FlashSaleId, nowUtc: Date): Promise<boolean>;
+  tryReserve(flashSaleId: FlashSaleId, nowUtc: Date, ctx?: PersistenceContext): Promise<boolean>;
 }
