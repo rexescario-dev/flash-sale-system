@@ -133,3 +133,62 @@ describe('Purchase.create', () => {
     );
   });
 });
+
+describe('Purchase.reconstitute', () => {
+  it('reconstitutes a purchase and preserves ids exactly', () => {
+    const paddedId = asPurchaseId('  purchase-1  ');
+    const paddedFlashSaleId = asFlashSaleId('  sale-1  ');
+    const paddedUserId = asUserId('  user-1  ');
+    const purchase = Purchase.reconstitute({
+      flashSaleId: paddedFlashSaleId,
+      id: paddedId,
+      userId: paddedUserId,
+      purchasedAt,
+    });
+
+    expect(purchase.getId()).toBe('  purchase-1  ');
+    expect(purchase.getFlashSaleId()).toBe('  sale-1  ');
+    expect(purchase.getUserId()).toBe('  user-1  ');
+    expect(purchase.getPurchasedAt().getTime()).toBe(purchasedAt.getTime());
+  });
+
+  it('isolates purchasedAt from getter mutation', () => {
+    const purchase = Purchase.reconstitute({ flashSaleId, id, userId, purchasedAt });
+    const originalTimestamp = purchasedAt.getTime();
+    purchase.getPurchasedAt().setTime(0);
+    expect(purchase.getPurchasedAt().getTime()).toBe(originalTimestamp);
+  });
+
+  it('isolates purchasedAt from input mutation after reconstitute', () => {
+    const input = new Date('2026-07-27T00:00:00.000Z');
+    const originalTimestamp = input.getTime();
+    const purchase = Purchase.reconstitute({
+      flashSaleId,
+      id,
+      userId,
+      purchasedAt: input,
+    });
+    input.setTime(0);
+    expect(purchase.getPurchasedAt().getTime()).toBe(originalTimestamp);
+  });
+
+  it('rejects empty id', () => {
+    expectValidationError(
+      () => Purchase.reconstitute({ flashSaleId, id: asPurchaseId(''), userId, purchasedAt }),
+      'EMPTY_ID',
+    );
+  });
+
+  it('rejects invalid purchasedAt', () => {
+    expectValidationError(
+      () =>
+        Purchase.reconstitute({
+          flashSaleId,
+          id,
+          userId,
+          purchasedAt: new Date('not-a-date'),
+        }),
+      'INVALID_PURCHASED_AT',
+    );
+  });
+});

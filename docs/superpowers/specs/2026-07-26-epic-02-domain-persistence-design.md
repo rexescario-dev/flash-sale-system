@@ -1,13 +1,13 @@
 # EPIC-02 — Flash Sale Domain & Persistence (Design Spec)
 
-**Status:** Draft (#17 flash-sale repository contract — pending review)
-**Date:** 2026-07-26 (updated 2026-07-28 for #17)
+**Status:** Draft (#18 purchase repository contract — pending review)
+**Date:** 2026-07-26 (updated 2026-07-28 for #18)
 **Epic:** [EPIC-02 #82](https://github.com/rexescario-dev/flash-sale-system/issues/82)
-**Next implementation ticket:** [#17 — Implement flash-sale repository](https://github.com/rexescario-dev/flash-sale-system/issues/17)
-**Completed detailed contracts:** [#11 — FlashSale](https://github.com/rexescario-dev/flash-sale-system/issues/11) (merged via PR #98), [#12 — Product](https://github.com/rexescario-dev/flash-sale-system/issues/12) (merged via PR #99), [#13 — Purchase](https://github.com/rexescario-dev/flash-sale-system/issues/13) (merged via PR #100), [#14 — Sale status rules](https://github.com/rexescario-dev/flash-sale-system/issues/14) (merged via PR #101), [#15 — Database schema](https://github.com/rexescario-dev/flash-sale-system/issues/15) (merged via PR #102), [#16 — Unique purchase constraint](https://github.com/rexescario-dev/flash-sale-system/issues/16) (merged via PR #103)
+**Next implementation ticket:** [#18 — Implement purchase repository](https://github.com/rexescario-dev/flash-sale-system/issues/18)
+**Completed detailed contracts:** [#11 — FlashSale](https://github.com/rexescario-dev/flash-sale-system/issues/11) (merged via PR #98), [#12 — Product](https://github.com/rexescario-dev/flash-sale-system/issues/12) (merged via PR #99), [#13 — Purchase](https://github.com/rexescario-dev/flash-sale-system/issues/13) (merged via PR #100), [#14 — Sale status rules](https://github.com/rexescario-dev/flash-sale-system/issues/14) (merged via PR #101), [#15 — Database schema](https://github.com/rexescario-dev/flash-sale-system/issues/15) (merged via PR #102), [#16 — Unique purchase constraint](https://github.com/rexescario-dev/flash-sale-system/issues/16) (merged via PR #103), [#17 — Flash-sale repository](https://github.com/rexescario-dev/flash-sale-system/issues/17) (merged via PR #104 at `432c142+`)
 **Child issues:** #11–#20
 **Repository:** `rexescario-dev/flash-sale-system`
-**Depends on:** EPIC-01 (#81), #11–#16 merged to `main`
+**Depends on:** EPIC-01 (#81), #11–#17 merged to `main`
 
 ## Goal
 
@@ -21,33 +21,35 @@ Share intentional domain concepts in `@flash-sale/domain`. Keep Prisma, NestJS, 
 
 ## Locked decisions
 
-| Area                  | Decision                                                                                                                                                                                                    |
-| --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Domain package        | `packages/domain` → `@flash-sale/domain`                                                                                                                                                                    |
-| Domain purity         | `@flash-sale/domain` has **no runtime dependencies** (devDependencies allowed). It must also have zero NestJS/Prisma/Redis/infrastructure dependencies.                                                     |
-| Shared types          | `@flash-sale/types` remains non-domain (transport/contracts only when both apps need them)                                                                                                                  |
-| Prisma                | Stays in `apps/api`; schema/migrations/client local to the API                                                                                                                                              |
-| Mapping               | Prisma ↔ domain mapping lives outside `@flash-sale/domain`                                                                                                                                                  |
-| Repository ports      | **Locked in #17:** ports live in `@flash-sale/domain` as thin interfaces + Nest injection tokens (no Prisma/Nest types on the port). `#18` follows the same location for `PurchaseRepository`.              |
-| Repository adapters   | Prisma implementations, mappers, and Nest feature modules always in `apps/api`                                                                                                                              |
-| #17 load style        | `FlashSaleRepository.findById` → `Promise<FlashSale \| null>`; Prisma read adapter + mapper/`reconstitute`; no writes; unit + PostgreSQL integration proof                                                  |
-| GraphQL purchase APIs | Out of EPIC-02; deferred to EPIC-03                                                                                                                                                                         |
-| Redis client          | Out of EPIC-02; deferred to EPIC-04 (Compose service already exists)                                                                                                                                        |
-| #11 modeling style    | Rich `FlashSale` class with private state, `create` / `reconstitute`, getters                                                                                                                               |
-| #12 modeling style    | Rich `Product` class with private state, **`create` only**, getters; mirrors #11 without premature shared helpers                                                                                           |
-| #13 modeling style    | Rich `Purchase` class with private state, **`create` only**, getters; IDs preserved (no trim); defensive `purchasedAt`                                                                                      |
-| #14 status style      | Instance method `FlashSale.getStatus(nowUtc)`; string-union `FlashSaleStatus`; temporal-first precedence; no purchase-gate helpers                                                                          |
-| #15 schema style      | Prisma-first in `apps/api`; domain-aligned columns; app-supplied `String @id`; snake_case SQL maps; `timestamptz(3)`; `onDelete: Restrict`; FK indexes; audit timestamps; named CHECKs via edited migration |
-| #16 uniqueness style  | Prisma-first `@@unique([flashSaleId, userId])`; drop redundant `@@index([flashSaleId])`; one new append-only migration; catalog + behavioral proof; no `ALREADY_PURCHASED` mapping                          |
-| Value objects         | Not introduced in #11–#17 (`SaleWindow`, `Stock` deferred until justified)                                                                                                                                  |
-| Spec shape            | EPIC-02 umbrella architecture + detailed #11–#17 contracts                                                                                                                                                  |
+| Area                  | Decision                                                                                                                                                                                                               |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Domain package        | `packages/domain` → `@flash-sale/domain`                                                                                                                                                                               |
+| Domain purity         | `@flash-sale/domain` has **no runtime dependencies** (devDependencies allowed). It must also have zero NestJS/Prisma/Redis/infrastructure dependencies.                                                                |
+| Shared types          | `@flash-sale/types` remains non-domain (transport/contracts only when both apps need them)                                                                                                                             |
+| Prisma                | Stays in `apps/api`; schema/migrations/client local to the API                                                                                                                                                         |
+| Mapping               | Prisma ↔ domain mapping lives outside `@flash-sale/domain`                                                                                                                                                             |
+| Repository ports      | **Locked in #17:** ports live in `@flash-sale/domain` as thin interfaces + Nest injection tokens (no Prisma/Nest types on the port). `#18` follows the same location for `PurchaseRepository`.                         |
+| Repository adapters   | Prisma implementations, mappers, and Nest feature modules always in `apps/api`                                                                                                                                         |
+| #17 load style        | `FlashSaleRepository.findById` → `Promise<FlashSale \| null>`; Prisma read adapter + mapper/`reconstitute`; no writes; unit + PostgreSQL integration proof                                                             |
+| #18 purchase repo     | `PurchaseRepository.save` + `findByFlashSaleAndUser`; domain `PurchaseConflictError` for composite uniqueness only; `Purchase.reconstitute`; dedicated `apps/api/src/purchase/` Nest slice                             |
+| GraphQL purchase APIs | Out of EPIC-02; deferred to EPIC-03                                                                                                                                                                                    |
+| Redis client          | Out of EPIC-02; deferred to EPIC-04 (Compose service already exists)                                                                                                                                                   |
+| #11 modeling style    | Rich `FlashSale` class with private state, `create` / `reconstitute`, getters                                                                                                                                          |
+| #12 modeling style    | Rich `Product` class with private state, **`create` only**, getters; mirrors #11 without premature shared helpers                                                                                                      |
+| #13 modeling style    | Rich `Purchase` class with private state, **`create`** + entity invariants (IDs preserved / defensive `purchasedAt`). `#18` adds `reconstitute` because persistence hydration now exists — not a retroactive `#13` gap |
+| #14 status style      | Instance method `FlashSale.getStatus(nowUtc)`; string-union `FlashSaleStatus`; temporal-first precedence; no purchase-gate helpers                                                                                     |
+| #15 schema style      | Prisma-first in `apps/api`; domain-aligned columns; app-supplied `String @id`; snake_case SQL maps; `timestamptz(3)`; `onDelete: Restrict`; FK indexes; audit timestamps; named CHECKs via edited migration            |
+| #16 uniqueness style  | Prisma-first `@@unique([flashSaleId, userId])`; drop redundant `@@index([flashSaleId])`; one new append-only migration; catalog + behavioral proof; no `ALREADY_PURCHASED` mapping                                     |
+| Value objects         | Not introduced in #11–#18 (`SaleWindow`, `Stock` deferred until justified)                                                                                                                                             |
+| Spec shape            | EPIC-02 umbrella architecture + detailed #11–#18 contracts                                                                                                                                                             |
 
 ## Dependency direction
 
 ```text
 apps/api
   ├── flash-sale/ (Nest feature slice)     (#17: mapper + Prisma adapter + module)
-  ├── application / use cases              (later tickets; not #17)
+  ├── purchase/   (Nest feature slice)     (#18: mapper + Prisma adapter + module)
+  ├── application / use cases              (later tickets; not #17/#18)
   ├── NestJS
   ├── Prisma
   ├── @flash-sale/types                    (non-domain transport/contracts)
@@ -56,16 +58,16 @@ apps/api
         ▼
 @flash-sale/domain
   └── ZERO runtime dependencies
-      ├── entities / domain errors
+      ├── entities / domain errors (incl. PurchaseConflictError)
       ├── repository ports (interfaces + injection tokens)
       ├── no NestJS
       ├── no Prisma
       └── no Redis
 
-PrismaFlashSaleRepository (apps/api)
-        │ implements FlashSaleRepository
-        ▼
-   PostgreSQL
+PrismaFlashSaleRepository (apps/api)          PrismaPurchaseRepository (apps/api)
+        │ implements FlashSaleRepository              │ implements PurchaseRepository
+        ▼                                             ▼
+   PostgreSQL                                    PostgreSQL
 ```
 
 `@flash-sale/types` does **not** depend on `@flash-sale/domain`. The `depends on` edge is from `apps/api` → `@flash-sale/domain`.
@@ -95,7 +97,7 @@ Domain entities do not know Prisma. Mapping is always outside `@flash-sale/domai
 | Prisma ↔ domain mapper          | `apps/api` (same feature slice)                                           |
 | Nest composition module         | `apps/api` (minimal provider/export wiring; no controllers/use cases yet) |
 
-`#17` introduces `FlashSaleRepository` + `PrismaFlashSaleRepository` (read/`findById` only). `#18` introduces `PurchaseRepository` + Prisma adapter and maps uniqueness violations to typed repository/infrastructure errors. `#20` owns `ALREADY_PURCHASED` purchase outcomes.
+`#17` introduced `FlashSaleRepository` + `PrismaFlashSaleRepository` (read/`findById` only). `#18` introduces `PurchaseRepository` + Prisma adapter (`save` + `findByFlashSaleAndUser`) and maps **composite** uniqueness violations to domain-owned `PurchaseConflictError`. `#20` owns translating that into `ALREADY_PURCHASED` purchase outcomes.
 
 ## EPIC-02 roadmap
 
@@ -128,9 +130,9 @@ Intended implementation sequence after domain models:
       ↓
 #16 Purchase uniqueness constraint UNIQUE(flash_sale_id, user_id)   ← done (PR #103)
       ↓
-#17 FlashSaleRepository port + Prisma findById load path   ← next
+#17 FlashSaleRepository port + Prisma findById load path   ← done (PR #104)
       ↓
-#18 PurchaseRepository + uniqueness → typed repository/infrastructure error
+#18 PurchaseRepository + uniqueness → PurchaseConflictError   ← next
       ↓
 #19 Atomic stock reservation
       ↓
@@ -144,10 +146,10 @@ Intended implementation sequence after domain models:
 Notes:
 
 - The uniqueness constraint is specifically on **Purchase**: `UNIQUE(flash_sale_id, user_id)`. It prevents duplicate purchases; it does **not** by itself make stock reservation concurrency-safe. Atomic reservation and oversell protection are owned by #19–#20.
-- Exact implementation details for #18–#20 are deferred until those tickets are planned; ownership boundaries above should not need rediscovery. The detailed `#17` contract is below (`#11`–`#16` contracts remain above/earlier in this file).
-- **Temporary identity-normalization inconsistency:** `#11` `FlashSale` and `#13` `Purchase` **preserve** non-trimmed IDs; `#12` `Product` **trims** `id` / `name` / provided `description`. This is an **acknowledged cross-entity inconsistency, not a desired domain convention**. Until a dedicated identity-normalization ticket resolves it, each entity must preserve its existing contract. New tickets must **not** silently normalize or de-normalize IDs for consistency — including `#17` (map/persist IDs exactly as stored; do not trim `FlashSale` / `Product` IDs in the flash-sale mapper). Uniqueness compares exact stored strings.
+- Exact implementation details for #19–#20 are deferred until those tickets are planned; ownership boundaries above should not need rediscovery. The detailed `#18` contract is below (`#11`–`#17` contracts remain above/earlier in this file).
+- **Temporary identity-normalization inconsistency:** `#11` `FlashSale` and `#13` `Purchase` **preserve** non-trimmed IDs; `#12` `Product` **trims** `id` / `name` / provided `description`. This is an **acknowledged cross-entity inconsistency, not a desired domain convention**. Until a dedicated identity-normalization ticket resolves it, each entity must preserve its existing contract. New tickets must **not** silently normalize or de-normalize IDs for consistency — including `#17`/`#18` (map/persist IDs exactly as stored; do not trim IDs in mappers). Uniqueness compares exact stored strings.
 
-## Target package tree (after #17)
+## Target package tree (after #18)
 
 ```text
 packages/
@@ -168,8 +170,10 @@ packages/
         product.errors.ts
         product.spec.ts
       purchase/
-        purchase.ts
+        purchase.ts               # create + reconstitute (#18)
         purchase.errors.ts
+        purchase-conflict.error.ts  # PurchaseConflictError (#18)
+        purchase.repository.ts      # PurchaseRepository + PURCHASE_REPOSITORY (#18)
         purchase.spec.ts
   types/
   typescript-config/
@@ -183,15 +187,23 @@ apps/api/
       prisma-flash-sale.repository.ts
       prisma-flash-sale.repository.spec.ts
       flash-sale.module.ts
+    purchase/                     # Nest feature slice (#18)
+      purchase.mapper.ts
+      purchase.mapper.spec.ts
+      prisma-purchase.repository.ts
+      prisma-purchase.repository.spec.ts
+      purchase.module.ts
     prisma/                       # existing PrismaModule / PrismaService
-    app.module.ts                 # imports FlashSaleModule
+    app.module.ts                 # imports FlashSaleModule + PurchaseModule
   test/
     schema/                       # #15/#16 catalog + uniqueness behavioral tests
     flash-sale/                   # #17 PostgreSQL integration round-trip
       prisma-flash-sale.repository.integration.spec.ts
+    purchase/                     # #18 PostgreSQL save/lookup/conflict integration
+      prisma-purchase.repository.integration.spec.ts
 ```
 
-`#17` does **not** add a new package. Domain gains only the port file; API gains the feature slice + integration test.
+`#18` does **not** add a new package. Domain gains the purchase port, conflict error, and `reconstitute`; API gains the purchase feature slice + integration tests.
 
 ## #11 — FlashSale domain model (detailed contract)
 
@@ -571,7 +583,14 @@ type PurchaseCreateProps = {
 
 Sequence: **validate → construct** (no ID normalization / trim-for-storage step).
 
-There is no derived state and no create-vs-hydrate lifecycle distinction yet, so **`Purchase.reconstitute` is out of #13** (YAGNI). Add it later only if persistence mapping needs a distinct hydration entry point.
+There is no derived state in `#13`, so **`Purchase.reconstitute` is out of #13** (YAGNI). Ownership timeline:
+
+```text
+#13 Purchase          → create + entity invariants (complete for that ticket)
+#18 Purchase repository → introduces reconstitute because persistence hydration now exists
+```
+
+`reconstitute()` is a domain API needed by the repository adapter; its implementation is **delivered in `#18`**, not a sign that `#13` was incomplete.
 
 ### Validation & invariants
 
@@ -669,7 +688,7 @@ getPurchasedAt(): Date {
 
 | Concern                                         | Owner                                   |
 | ----------------------------------------------- | --------------------------------------- |
-| `Purchase.reconstitute`                         | Later, if hydration needs it            |
+| `Purchase.reconstitute`                         | `#18`                                   |
 | Uniqueness helpers / multi-purchase check APIs  | Not in domain entity; deferred past #13 |
 | DB `UNIQUE(flash_sale_id, user_id)`             | #16                                     |
 | Map DB uniqueness violation → repository error  | #18                                     |
@@ -977,7 +996,7 @@ updatedAt DateTime @updatedAt @db.Timestamptz(3) @map("updated_at")
 
 **`updatedAt` semantics:** `@updatedAt` is maintained by **Prisma Client** on Prisma-managed updates. It is **not** a PostgreSQL trigger and is **not** used for business decisions. Any future raw SQL / `updateMany` / database-level update path (notably `#19`–`#20` inventory reservation) that mutates these rows must explicitly maintain `updated_at` if audit semantics require it.
 
-**Mapper implication (for `#17`–`#18`, not implemented in `#15`):** mappers may discard `createdAt` / `updatedAt` when converting Prisma records to domain entities because these fields are persistence/audit metadata and are not represented by domain entities. Domain factories such as `Product.create` / `Purchase.create` / `FlashSale.reconstitute` do not accept audit timestamps.
+**Mapper implication (for `#17`–`#18`, not implemented in `#15`):** mappers may discard `createdAt` / `updatedAt` when converting Prisma records to domain entities because these fields are persistence/audit metadata and are not represented by domain entities. Domain factories such as `Product.create` / `Purchase.create` / `Purchase.reconstitute` / `FlashSale.reconstitute` do not accept audit timestamps.
 
 ### Target Prisma schema (`apps/api/prisma/schema.prisma`)
 
@@ -1624,6 +1643,312 @@ origin/main (EPIC-01 + #11–#16 merged at 10279ca+)
     → commit: <type>: <MESSAGE>
 ```
 
+## #18 — Implement purchase repository (detailed contract)
+
+### Issue acceptance criteria
+
+From GitHub [#18](https://github.com/rexescario-dev/flash-sale-system/issues/18), interpreted for this contract:
+
+- Purchase create/lookup is implemented → **`save(purchase)` + `findByFlashSaleAndUser(flashSaleId, userId)`**
+- Unique constraint violations map to domain/application results → **adapter maps composite `P2002` → domain `PurchaseConflictError`**; application outcome `ALREADY_PURCHASED` remains **`#20`**
+
+### Design interpretation for #18
+
+- Deliver a purchase persistence port with **insert** (`save`) and **composite-key lookup** (`findByFlashSaleAndUser`).
+- **Port ownership:** `PurchaseRepository` interface + Nest injection token live in `@flash-sale/domain`. Domain remains free of NestJS/Prisma/Redis and has **no runtime package dependencies**.
+- **Conflict ownership:** domain-owned `PurchaseConflictError` (`code: 'PURCHASE_CONFLICT'`) is the stable typed error that crosses the port. It is **not** named `AlreadyPurchasedError` and does **not** use `ALREADY_PURCHASED`.
+- **Hydration:** `#18` adds `Purchase.reconstitute(...)` so load paths are distinct from `Purchase.create(...)` (symmetry with `FlashSale`).
+- **Adapter ownership:** `PrismaPurchaseRepository`, `PurchaseMapper`, and a minimal `PurchaseModule` live in `apps/api` under `src/purchase/` (dedicated slice; do **not** fold into `FlashSaleModule`).
+- **Out of #18:** `findById`, `ALREADY_PURCHASED`, GraphQL, Redis client, controllers, application use cases, transactions, stock mutation, schema/migration edits.
+- Approach: **thin domain port + focused Nest feature slice** (composition root for Purchase persistence only).
+
+### Locked decisions (#18)
+
+| Decision                          | Choice                                                                                                                                                                                                             |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Port location                     | `@flash-sale/domain` (`purchase.repository.ts`)                                                                                                                                                                    |
+| DI token ownership                | `PURCHASE_REPOSITORY` Symbol defined and exported from `@flash-sale/domain` (same file as the port; YAGNI for a separate `.token.ts`)                                                                              |
+| Port vs token roles               | `PurchaseRepository` = domain port (compile-time); `PURCHASE_REPOSITORY` = runtime Nest DI token only                                                                                                              |
+| Port methods                      | `save(purchase)` + `findByFlashSaleAndUser(flashSaleId, userId)` only — **no `findById`**                                                                                                                          |
+| ID types on port                  | Branded `FlashSaleId` + `UserId` (and `Purchase` entity for `save`)                                                                                                                                                |
+| Conflict error                    | Domain-owned `PurchaseConflictError` with `readonly code = 'PURCHASE_CONFLICT'`                                                                                                                                    |
+| Conflict file                     | `packages/domain/src/purchase/purchase-conflict.error.ts` (separate from `PurchaseValidationError`)                                                                                                                |
+| Which `P2002` maps                | Exact set `{flashSaleId, userId}` **or** `{flash_sale_id, user_id}` (order-independent). Prisma 6 on this project emits SQL column names in `meta.target` (verified against PostgreSQL); accept both naming forms. |
+| Other `P2002` (e.g. duplicate id) | Propagate as unexpected persistence error (do **not** remap)                                                                                                                                                       |
+| `ALREADY_PURCHASED`               | **`#20` only**                                                                                                                                                                                                     |
+| Hydration                         | `Purchase.reconstitute` added in `#18`; mapper calls it (not `create`)                                                                                                                                             |
+| Corrupt / invalid persisted row   | `Purchase.reconstitute` throws → `PurchaseValidationError` **propagates unchanged**                                                                                                                                |
+| Adapter / mapper / Nest module    | `apps/api/src/purchase/`                                                                                                                                                                                           |
+| Nest module surface               | Register concrete adapter + `useExisting` token alias; export token; register from `AppModule`                                                                                                                     |
+| Controllers / use cases           | **None** in `#18`                                                                                                                                                                                                  |
+| ID branding in mapper             | Local casts to `PurchaseId` / `FlashSaleId` / `UserId`; no public branding helpers                                                                                                                                 |
+| Audit timestamps                  | Discarded at `toDomain` (`createdAt` / `updatedAt` are persistence-only)                                                                                                                                           |
+| ID normalization                  | Preserve stored strings; do not trim in mapper or adapter                                                                                                                                                          |
+| `save` semantics                  | Insert-only (`prisma.purchase.create`); return `Promise<void>`; no update/upsert                                                                                                                                   |
+| Verification                      | Unit tests (mocked Prisma + conflict targeting + corrupt reconstitution) **and** PostgreSQL save/lookup/conflict integration                                                                                       |
+| Typecheck                         | Turbo `typecheck` already depends on `^build` (workspace deps must build before typecheck; keep this invariant)                                                                                                    |
+
+### Port contract
+
+`PurchaseRepository` is the **domain port**. `PURCHASE_REPOSITORY` is its **runtime DI token**. The domain must **not** import Nest decorators on the port or token.
+
+Keep both in one file (`purchase.repository.ts`) unless a later ticket justifies a split:
+
+```ts
+import type { FlashSaleId, UserId } from '../ids.js';
+import type { Purchase } from './purchase.js';
+
+/** Runtime Nest DI token for PurchaseRepository. Owned by @flash-sale/domain. */
+export const PURCHASE_REPOSITORY = Symbol('PURCHASE_REPOSITORY');
+
+export interface PurchaseRepository {
+  save(purchase: Purchase): Promise<void>;
+
+  findByFlashSaleAndUser(flashSaleId: FlashSaleId, userId: UserId): Promise<Purchase | null>;
+}
+```
+
+Behavioral contract:
+
+- `save` persists a new `Purchase`. It does not mutate domain state. On success it resolves to `void`.
+- `save` maps **only** composite uniqueness violations to `PurchaseConflictError`. Other persistence failures propagate.
+- `findByFlashSaleAndUser` is a **pure load**. Missing row → `null` (not an error).
+- Callers pass already-branded IDs. Runtime blankness is not re-validated by the port; the adapter queries by the underlying strings.
+- Lookup uses Prisma composite unique: `findUnique({ where: { flashSaleId_userId: { flashSaleId, userId } } })`.
+- Exact string equality (no trim).
+
+### `Purchase.reconstitute` contract
+
+Add alongside `Purchase.create`:
+
+```ts
+export type PurchaseReconstituteProps = {
+  id: PurchaseId;
+  flashSaleId: FlashSaleId;
+  purchasedAt: Date;
+  userId: UserId;
+};
+```
+
+- Same field invariants as `create` (non-blank IDs via trim-for-blankness-only; valid `purchasedAt`; store original IDs unchanged; defensive `Date` copies).
+- Prefer sharing private validation with `create` (e.g. `assertValid`) rather than duplicating checks — same pattern as `FlashSale`.
+- Export `PurchaseReconstituteProps` from `@flash-sale/domain`.
+- Domain unit tests cover `reconstitute` success + failure `code`s (mirror `create` coverage; do not assert exact message strings).
+
+### `PurchaseConflictError` contract
+
+```ts
+export class PurchaseConflictError extends Error {
+  readonly code = 'PURCHASE_CONFLICT' as const;
+
+  constructor(message = 'Purchase conflicts with an existing purchase') {
+    super(message);
+    this.name = 'PurchaseConflictError';
+  }
+}
+```
+
+- Consumers branch on `code` / `instanceof`, not by parsing `message`.
+- **Not** a `PurchaseValidationErrorCode`.
+- **Not** `ALREADY_PURCHASED`.
+- Export from `packages/domain/src/index.ts`.
+
+Error boundary:
+
+```text
+Prisma P2002
+    │
+    ├── set(target) === { flashSaleId, userId }   (order-independent)
+    │       └──→ PurchaseConflictError
+    │                 └── #20 → ALREADY_PURCHASED
+    │
+    └── target = [id] / unknown / other
+            └──→ propagate as unexpected persistence error
+```
+
+### Mapper contract
+
+> The mapper translates between Prisma `Purchase` persistence records and domain `Purchase` arguments. It does **not** perform independent domain validation or silently normalize invalid data.
+
+**`PurchaseMapper.toDomain(row)`**
+
+| Prisma field  | Domain `reconstitute` input | Notes                                  |
+| ------------- | --------------------------- | -------------------------------------- |
+| `id`          | `id: PurchaseId`            | Local cast; preserve exact string      |
+| `flashSaleId` | `flashSaleId: FlashSaleId`  | Local cast; preserve exact string      |
+| `userId`      | `userId: UserId`            | Local cast; preserve exact string      |
+| `purchasedAt` | `purchasedAt: Date`         | Absolute instant from Prisma DateTime  |
+| `createdAt`   | —                           | **Discarded** (persistence/audit only) |
+| `updatedAt`   | —                           | **Discarded** (persistence/audit only) |
+
+**`PurchaseMapper.toPersistence(purchase)`** (for `save`)
+
+| Domain getter      | Prisma create field     | Notes                         |
+| ------------------ | ----------------------- | ----------------------------- |
+| `getId()`          | `id`                    | Exact string                  |
+| `getFlashSaleId()` | `flashSaleId`           | Exact string                  |
+| `getUserId()`      | `userId`                | Exact string                  |
+| `getPurchasedAt()` | `purchasedAt`           | Absolute instant              |
+| —                  | `createdAt`/`updatedAt` | Omitted; DB / Prisma defaults |
+
+- Mapper must **not** import Nest decorators.
+- Mapper may accept the Prisma `Purchase` model type **or** an equivalent plain object with the same business fields; it must not accept GraphQL DTOs.
+- `toDomain` calls `Purchase.reconstitute(...)` and does **not** catch its errors.
+- `Purchase.getPurchasedAt()` is expected to return a defensive copy; `toPersistence()` must not expose mutable domain state (using the getter is sufficient).
+
+### Prisma adapter
+
+`PrismaPurchaseRepository` implements `PurchaseRepository`. Mark `@Injectable()`. Inject `PrismaService`. Keep it boring:
+
+```text
+save(purchase)
+  → data = PurchaseMapper.toPersistence(purchase)
+  → try prisma.purchase.create({ data })
+  → catch Prisma P2002:
+        if set(meta.target) === { flashSaleId, userId }   # order-independent
+          throw PurchaseConflictError
+        else
+          rethrow
+  → resolve void
+
+findByFlashSaleAndUser(flashSaleId, userId)
+  → prisma.purchase.findUnique({
+       where: { flashSaleId_userId: { flashSaleId, userId } }
+     })
+  → null? return null
+  → PurchaseMapper.toDomain(row)
+  → return Purchase
+```
+
+**P2002 target inspection (locked):** do **not** remap every `P2002`. Inspect Prisma `meta.target`. Treat the violation as composite when the target is an **exact set** equal to either naming form — **order must not matter**:
+
+```text
+isComposite =
+  set(target) === { flashSaleId, userId }
+  OR
+  set(target) === { flash_sale_id, user_id }
+```
+
+Required proof points:
+
+- `['flashSaleId', 'userId']` → `PurchaseConflictError`
+- `['userId', 'flashSaleId']` → `PurchaseConflictError` (order independence)
+- `['flash_sale_id', 'user_id']` (or reversed) → `PurchaseConflictError` — **runtime shape on Prisma 6 + PostgreSQL in this project**
+- `['id']` → rethrow original error
+- unknown/other target → rethrow original error
+
+Do **not** use ordered array equality such as `target === ['flashSaleId', 'userId']`.
+
+Do **not** catch `PurchaseValidationError`. Do **not** include related `flashSale` in `#18` queries.
+
+### Nest wiring
+
+```ts
+@Module({
+  exports: [PURCHASE_REPOSITORY],
+  providers: [
+    PrismaPurchaseRepository,
+    {
+      provide: PURCHASE_REPOSITORY,
+      useExisting: PrismaPurchaseRepository,
+    },
+  ],
+})
+export class PurchaseModule {}
+```
+
+- Prefer `useExisting` so the concrete adapter is a first-class provider and the domain token aliases it.
+- `PrismaModule` is already `@Global()`; `PurchaseModule` does not need to import or re-export Prisma.
+- `AppModule` imports `PurchaseModule` (alongside existing `FlashSaleModule`).
+- No controllers, resolvers, or application services in `#18`.
+
+### Public API surface (#18 delta)
+
+Export from `packages/domain/src/index.ts` (in addition to existing Purchase / FlashSale exports):
+
+- `PurchaseRepository` (type)
+- `PURCHASE_REPOSITORY` (runtime DI token — domain-owned Symbol; never redefine in `apps/api`)
+- `PurchaseConflictError`
+- `PurchaseReconstituteProps` (type)
+
+Do not export mapper, Prisma adapter, or Nest module from `@flash-sale/domain`.
+
+### Testing (#18)
+
+**Domain unit** — `@flash-sale/domain` `purchase.spec.ts`:
+
+- `reconstitute` success preserves exact IDs + defensive `purchasedAt`
+- `reconstitute` failures assert `code` only (`EMPTY_*` / `INVALID_PURCHASED_AT`)
+
+**API unit (no DB)** — under `apps/api/src/purchase/*.spec.ts`, default API Jest suite:
+
+- Mapper `toDomain`: valid row → getters match; audit fields ignored
+- Mapper `toPersistence`: domain entity → Prisma create shape
+- Adapter: `findUnique` returns `null` → `findByFlashSaleAndUser` returns `null`
+- Adapter: row → mapper/`reconstitute` → `Purchase`
+- Adapter: `create` succeeds → `save` resolves
+- Adapter P2002 mapping (unit — **required minimum**):
+  - `P2002` + `['flashSaleId', 'userId']` → `PurchaseConflictError` (`code === 'PURCHASE_CONFLICT'`)
+  - `P2002` + `['userId', 'flashSaleId']` → `PurchaseConflictError` (proves **order independence**)
+  - `P2002` + `['id']` → original Prisma error rethrown (not `PurchaseConflictError`)
+  - `P2002` + unknown/other target → original Prisma error rethrown (not `PurchaseConflictError`)
+- SQL-column targets (`flash_sale_id` / `user_id`) are **not** required unit coverage for `#18`
+- **Corrupt path (unit only):** invalid persisted state → `PurchaseValidationError` propagates (`code` assertion)
+- Mock `PrismaService` / Prisma client — no PostgreSQL required
+
+**PostgreSQL integration** — under `apps/api/test/purchase/`, existing `jest.integration.config.cjs` / `pnpm --filter api test:integration` (extend suite; do not invent a second Postgres job):
+
+1. Seed minimal graph: `Product` → `FlashSale` (FK `Restrict`) → `Purchase` via repo `save`
+2. `save` then `findByFlashSaleAndUser` → domain getters match
+3. Missing pair → `null`
+4. Second `save` with same `(flashSaleId, userId)` but different `id` → `PurchaseConflictError`
+5. Cleanup in `afterEach` / `finally` consistent with `#17` integration style
+
+Do **not** assert `ALREADY_PURCHASED`, GraphQL, or Redis in `#18`.
+
+### CI (#18)
+
+Reuse the `#17` `schema-test` job sequence (Postgres 16 + migrate + `test:schema` + `test:integration`). Purchase integration specs ride the existing `test:integration` step — **no new CI job**. Keep lint / typecheck / unit-test / build DB-independent. Preserve Turbo `typecheck` → `^build` so workspace packages are built before dependent typecheck.
+
+### Explicitly out of #18
+
+| Concern                                                   | Owner                         |
+| --------------------------------------------------------- | ----------------------------- |
+| `findById` on `PurchaseRepository`                        | Later, if a use case needs it |
+| `ALREADY_PURCHASED` purchase outcome                      | `#20`                         |
+| Transactional purchase flow / concurrency                 | `#20`                         |
+| Atomic stock reservation                                  | `#19`–`#20`                   |
+| Controllers / GraphQL resolvers / use cases               | Later / EPIC-03               |
+| Redis client                                              | EPIC-04                       |
+| Schema / migration changes                                | Not in `#18` (schema done)    |
+| FlashSale / Product domain or repository changes          | Not in `#18`                  |
+| Remapping non-composite `P2002` / duplicate purchase `id` | Not typed in `#18`            |
+
+### Definition of Done (#18)
+
+- Implementation complete for this issue only
+- `PurchaseRepository` + domain-owned `PURCHASE_REPOSITORY` exported from `@flash-sale/domain`
+- `PurchaseConflictError` exported; composite uniqueness only maps to it; `ALREADY_PURCHASED` absent
+- `Purchase.reconstitute` added and used by mapper; corrupt rows propagate `PurchaseValidationError`
+- Prisma adapter implements `save` + `findByFlashSaleAndUser`; inspects `P2002` `meta.target` as an **order-independent exact set** `{flashSaleId, userId}` (Prisma field names)
+- Minimal `PurchaseModule` uses `useExisting` token alias and is imported by `AppModule`
+- Unit + PostgreSQL integration tests added and passing under existing `test` / `test:integration`
+- ESLint (incl. perfectionist) and typecheck pass; Turbo `^build` dependency preserved for typecheck
+- No unrelated changes (no GraphQL; no Redis; no `#20` outcomes; no schema/migration edits; no `findById`)
+- If commits are authorized, commit messages follow `<type>: <MESSAGE>` (no `Co-authored-by`); author `rex.escario.jr@gmail.com`
+
+### Pre-implementation sequencing (#18)
+
+```text
+origin/main (EPIC-01 + #11–#17 merged at 432c142+)
+    → sync local checkout
+    → finalize this umbrella spec with #18 contract
+    → write implementation plan
+    → implement #18 on a feature branch
+    → unit + integration + workspace quality gates
+    → commit: <type>: <MESSAGE>
+```
+
 ## Epic success criteria (from #82)
 
 - Sale status rules are enforced in the domain
@@ -1631,4 +1956,4 @@ origin/main (EPIC-01 + #11–#16 merged at 10279ca+)
 - Inventory reservation is atomic and transactional
 - No overselling under concurrent load in integration tests
 
-Child acceptance criteria remain on the linked issues; this spec does not duplicate them beyond the #11–#17 contracts above.
+Child acceptance criteria remain on the linked issues; this spec does not duplicate them beyond the #11–#18 contracts above.

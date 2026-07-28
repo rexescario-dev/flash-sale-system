@@ -10,7 +10,7 @@ module.exports = {
   },
   rootDir: '.',
   testEnvironment: 'node',
-  testMatch: ['<rootDir>/test/flash-sale/**/*.spec.ts'],
+  testMatch: ['<rootDir>/test/flash-sale/**/*.spec.ts', '<rootDir>/test/purchase/**/*.spec.ts'],
   testTimeout: 30_000,
   transform: {
     '^.+\\.(t|j)s$': 'ts-jest',

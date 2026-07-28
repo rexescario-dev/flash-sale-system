@@ -7,9 +7,14 @@ import { validateEnv } from './config/env.validation';
 import { FlashSaleModule } from './flash-sale/flash-sale.module';
 import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { PurchaseModule } from './purchase/purchase.module';
 
 @Module({
   imports: [
+    FlashSaleModule,
+    HealthModule,
+    PrismaModule,
+    PurchaseModule,
     ConfigModule.forRoot({
       isGlobal: true,
       validate: validateEnv,
@@ -20,9 +25,6 @@ import { PrismaModule } from './prisma/prisma.module';
       introspection: process.env.NODE_ENV !== 'production',
       playground: process.env.NODE_ENV !== 'production',
     }),
-    PrismaModule,
-    HealthModule,
-    FlashSaleModule,
   ],
 })
 export class AppModule {}
