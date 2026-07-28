@@ -9,10 +9,13 @@ When creating commits in this repository:
 
 - Use `<type>: <MESSAGE>` (e.g. `feat: add FlashSale domain entity`)
 - Keep the subject concise; optional short body only when needed for why
-- **Do not** add trailer/footer lines such as:
-  - `Co-authored-by:`
+- **Never** add trailer/footer lines such as:
+  - `Co-authored-by:` (including `Co-authored-by: Cursor <cursoragent@cursor.com>`)
+  - `Made-with: Cursor` / `Made with Cursor`
   - `Signed-off-by:` (unless the user explicitly requests it)
   - `Generated-by:` / similar AI attribution trailers
+- Do **not** pass `git commit --trailer ...` for Cursor/AI attribution
+- If a trailer was injected anyway, strip it before push (amend only when amend rules allow; otherwise create a replacement commit on an unpushed branch / rewrite with user approval)
 
 ```text
 # ❌ BAD

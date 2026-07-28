@@ -1,0 +1,18 @@
+#!/usr/bin/env sh
+# Strip Cursor/AI attribution trailers that may be injected into commit messages.
+MSG_FILE="$1"
+
+if [ -z "$MSG_FILE" ] || [ ! -f "$MSG_FILE" ]; then
+  exit 0
+fi
+
+# Remove Co-authored-by / Made-with / similar Cursor attribution trailers.
+tmp="$(mktemp)"
+sed -E \
+  -e '/^Co-authored-by:[[:space:]]*Cursor[[:space:]]*<cursoragent@cursor\.com>[[:space:]]*$/Id' \
+  -e '/^Made-with:[[:space:]]*Cursor[[:space:]]*$/Id' \
+  -e '/^Made with Cursor[[:space:]]*$/Id' \
+  "$MSG_FILE" > "$tmp"
+# Collapse trailing blank lines left after trailer removal.
+sed -e :a -e '/^\n*$/{$d;N;ba' -e '}' "$tmp" > "$MSG_FILE"
+rm -f "$tmp"

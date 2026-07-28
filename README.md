@@ -47,7 +47,7 @@ packages/
 ## Local endpoints
 
 - API liveness: `GET http://localhost:3000/health`
-- GraphQL (dev sandbox): `http://localhost:3000/graphql` — `query { health }`
+- GraphQL (dev sandbox): `http://localhost:3000/graphql`
 - Web: `http://localhost:5173`
 
 ## Architecture note
