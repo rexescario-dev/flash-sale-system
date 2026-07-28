@@ -5,6 +5,7 @@ import { GraphQLModule } from '@nestjs/graphql';
 
 import { validateEnv } from './config/env.validation';
 import { FlashSaleModule } from './flash-sale/flash-sale.module';
+import { GraphqlCommonModule } from './graphql/graphql-common.module';
 import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { PurchaseModule } from './purchase/purchase.module';
@@ -12,6 +13,7 @@ import { PurchaseModule } from './purchase/purchase.module';
 @Module({
   imports: [
     FlashSaleModule,
+    GraphqlCommonModule,
     HealthModule,
     PrismaModule,
     PurchaseModule,
