@@ -5,8 +5,4 @@ export class HealthService {
   getLiveness(): { status: 'ok' } {
     return { status: 'ok' };
   }
-
-  getLivenessStatus(): string {
-    return 'ok';
-  }
 }
