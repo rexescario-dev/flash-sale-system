@@ -26,3 +26,49 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  migrate:
+    container_name: flash-sale-migrate
+    build:
+      context: .
+      target: migrate
+    environment:
+      DATABASE_URL: postgresql://flash_sale:flash_sale_dev@postgres:5432/flash_sale
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+
+  api:
+    container_name: flash-sale-api
+    build:
+      context: .
+      target: api
+    ports:
+      - '3000:3000'
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://flash_sale:flash_sale_dev@postgres:5432/flash_sale
+      REDIS_URL: redis://redis:6379
+      PORT: '3000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  web:
+    container_name: flash-sale-web
+    build:
+      context: .
+      target: web
+      args:
+        VITE_API_URL: http://localhost:3000
+    ports:
+      - '5173:5173'
+    depends_on:
+      api:
+        condition: service_healthy
