@@ -11,6 +11,7 @@ module.exports = {
   rootDir: '.',
   testEnvironment: 'node',
   testMatch: [
+    '<rootDir>/test/fixtures/**/*.spec.ts',
     '<rootDir>/test/flash-sale/**/*.spec.ts',
     '<rootDir>/test/graphql/**/*.spec.ts',
     '<rootDir>/test/purchase/**/*.spec.ts',
