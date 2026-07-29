@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Task 5 DoD checks for #118. Run from repo root of this worktree:
-#   bash scripts/verify-118-compose.sh
+# Local DX helper: verify the full Docker Compose application stack contract.
+# Not used by CI. Run from the repository root:
+#   bash scripts/verify-compose.sh
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
@@ -70,4 +71,4 @@ set -e
 docker compose -f docker-compose.yml -f /tmp/docker-compose.migrate-fail.yml down
 rm -f /tmp/docker-compose.migrate-fail.yml
 
-echo "OK: #118 verify script completed structural checks (confirm migrate-fail gate manually above)."
+echo "OK: Compose verification completed (confirm migrate-fail gate output above)."

@@ -44,6 +44,14 @@ The API container connects to PostgreSQL and Redis using Compose service DNS (`p
 
 Keep `.env` at the **repository root** (not `apps/api/`). Compose loads non-infra knobs via `env_file` and overrides `DATABASE_URL`, `REDIS_URL`, and API `PORT=3000` for containers.
 
+### Verify Compose stack
+
+Optional local DX check (not used by CI):
+
+```bash
+bash scripts/verify-compose.sh
+```
+
 ## Scripts
 
 | Command                             | Description                   |
