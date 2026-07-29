@@ -1,0 +1,12 @@
+{
+  "name": "tailwindcss",
+  "version": "0.0.0-local-bridge",
+  "description": "Temporary local Tailwind bridge while npm registry is unreachable. Replace with real tailwindcss@^4 when install works.",
+  "type": "module",
+  "style": "index.css",
+  "exports": {
+    ".": "./index.css",
+    "./index.css": "./index.css",
+    "./package.json": "./package.json"
+  }
+}

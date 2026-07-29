@@ -448,12 +448,31 @@ describe('FlashSalePage', () => {
 });
 
 describe('AppRoutes unmatched GraphQL stays loud', () => {
-  it('landing still works without GraphQL', async () => {
-    render(
-      <MemoryRouter initialEntries={['/']}>
-        <AppRoutes />
-      </MemoryRouter>,
+  it('catalog at / mounts with QueryClient and handles FlashSales errors', async () => {
+    server.use(
+      http.post(graphqlUrl(), async ({ request }) => {
+        const body = await readGraphqlBody(request);
+        if (body.operationName === 'FlashSales') {
+          return HttpResponse.json({
+            errors: [{ extensions: { code: 'UNHANDLED_TEST_OPERATION' }, message: 'nope' }],
+          });
+        }
+        return HttpResponse.json({
+          errors: [{ message: `Unhandled ${body.operationName}` }],
+        });
+      }),
     );
-    expect(screen.getByRole('heading', { name: /flash sale/i })).toBeInTheDocument();
+
+    render(
+      <QueryClientProvider client={createTestQueryClient()}>
+        <MemoryRouter initialEntries={['/']}>
+          <AppRoutes />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    expect(await screen.findByTestId('catalog-page')).toBeInTheDocument();
+    expect(await screen.findByTestId('catalog-error')).toBeInTheDocument();
+    expect(screen.getByTestId('catalog-error')).not.toHaveTextContent('UNHANDLED_TEST_OPERATION');
   });
 });

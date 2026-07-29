@@ -12,6 +12,23 @@ export type FlashSale = {
   totalStock: number;
 };
 
+export type Product = {
+  id: string;
+  description: null | string;
+  name: string;
+};
+
+/** Catalog row — nested product required. Do not weaken detail FlashSale for this. */
+export type CatalogFlashSale = {
+  id: string;
+  endsAt: string;
+  product: Product;
+  remainingStock: number;
+  startsAt: string;
+  status: FlashSaleStatus;
+  totalStock: number;
+};
+
 export type MyPurchaseResult = {
   purchaseId: null | string;
   purchased: boolean;
