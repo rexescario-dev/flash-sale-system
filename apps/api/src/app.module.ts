@@ -9,6 +9,7 @@ import { GraphqlCommonModule } from './graphql/graphql-common.module';
 import { HealthModule } from './health/health.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { PurchaseModule } from './purchase/purchase.module';
+import { RedisModule } from './redis/redis.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { PurchaseModule } from './purchase/purchase.module';
     HealthModule,
     PrismaModule,
     PurchaseModule,
+    RedisModule,
     ConfigModule.forRoot({
       isGlobal: true,
       validate: validateEnv,

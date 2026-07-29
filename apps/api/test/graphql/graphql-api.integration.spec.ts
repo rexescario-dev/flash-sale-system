@@ -12,8 +12,12 @@ import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { randomUUID } from 'node:crypto';
 
+import type { RedisClientPort } from '../../src/redis/redis-client.port';
+
 import { AppModule } from '../../src/app.module';
 import { PrismaService } from '../../src/prisma/prisma.service';
+import { myPurchaseCacheKey } from '../../src/redis/redis-keys';
+import { REDIS_CLIENT } from '../../src/redis/redis.tokens';
 
 type GraphqlError = {
   extensions?: { code?: string };
@@ -301,6 +305,9 @@ describe('GraphQL API integration (#26) - persistence suite', () => {
           purchasedAt,
         },
       });
+      // Direct Prisma write bypasses purchaseItem invalidation — drop negative cache.
+      const redis = app.get<RedisClientPort>(REDIS_CLIENT);
+      await redis.delete(myPurchaseCacheKey(flashSaleId, userId));
 
       const purchased = await postGraphql<{
         myPurchase: { purchaseId: null | string; purchased: boolean; purchasedAt: null | string };

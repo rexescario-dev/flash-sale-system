@@ -12,8 +12,9 @@ module.exports = {
   testEnvironment: 'node',
   testMatch: [
     '<rootDir>/test/flash-sale/**/*.spec.ts',
-    '<rootDir>/test/purchase/**/*.spec.ts',
     '<rootDir>/test/graphql/**/*.spec.ts',
+    '<rootDir>/test/purchase/**/*.spec.ts',
+    '<rootDir>/test/redis/**/*.spec.ts',
   ],
   testTimeout: 30_000,
   transform: {

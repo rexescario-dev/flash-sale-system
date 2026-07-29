@@ -3,6 +3,7 @@ import { BadRequestException, InternalServerErrorException, Logger } from '@nest
 import { GraphQLError } from 'graphql';
 
 import { GraphqlBadUserInputError } from './graphql-bad-user-input.error';
+import { GraphqlRateLimitedError } from './graphql-rate-limited.error';
 import { mapGraphqlError } from './map-graphql-error';
 
 describe('mapGraphqlError', () => {
@@ -15,6 +16,13 @@ describe('mapGraphqlError', () => {
   it('maps GraphqlBadUserInputError to BAD_USER_INPUT', () => {
     const err = mapGraphqlError(new GraphqlBadUserInputError('bad'));
     expect(err.extensions?.code).toBe('BAD_USER_INPUT');
+  });
+
+  it('maps GraphqlRateLimitedError to RATE_LIMITED', () => {
+    const err = mapGraphqlError(new GraphqlRateLimitedError());
+    expect(err).toBeInstanceOf(GraphQLError);
+    expect(err.extensions?.code).toBe('RATE_LIMITED');
+    expect(err.message).toBe('Rate limit exceeded');
   });
 
   it('scrubs HttpException to INTERNAL_SERVER_ERROR without leaking details', () => {

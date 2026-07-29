@@ -50,6 +50,10 @@ packages/
 - GraphQL (dev sandbox): `http://localhost:3000/graphql`
 - Web: `http://localhost:5173`
 
+## Redis / local stack
+
+`docker compose up -d` starts PostgreSQL and Redis (`REDIS_URL=redis://localhost:6379`). Redis is non-authoritative: query cache for `flashSale` / `myPurchase` plus IP rate limiting for `purchaseItem`, with fail-open fallback to Postgres. See [docs/redis-caching-strategy.md](docs/redis-caching-strategy.md).
+
 ## Architecture note
 
 Share configuration and intentional contracts. Keep infrastructure local to the consuming app. Modular monolith first.
