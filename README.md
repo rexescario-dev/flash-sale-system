@@ -19,6 +19,8 @@ docker compose up -d
 pnpm --filter api prisma:generate
 ```
 
+Keep `.env` at the **repository root** (not `apps/api/`). `pnpm dev` loads it from there.
+
 ## Scripts
 
 | Command                             | Description                   |
