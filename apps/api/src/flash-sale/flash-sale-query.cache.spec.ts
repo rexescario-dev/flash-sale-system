@@ -2,6 +2,7 @@ import {
   FlashSale,
   type FlashSaleId,
   type FlashSaleRepository,
+  Product,
   type ProductId,
 } from '@flash-sale/domain';
 import { Logger } from '@nestjs/common';
@@ -29,10 +30,19 @@ describe('FlashSaleQueryCache', () => {
     startsAt: new Date('2026-07-28T10:00:00.000Z'),
     totalStock: 5,
   });
+  const product = Product.create({
+    id: 'product-1' as ProductId,
+    name: 'Widget',
+  });
 
   const expectedSnapshot = {
     id: 'sale-1',
     endsAt: '2026-07-28T14:00:00.000Z',
+    product: {
+      id: 'product-1',
+      description: null,
+      name: 'Widget',
+    },
     remainingStock: 3,
     startsAt: '2026-07-28T10:00:00.000Z',
     status: 'ACTIVE' as const,
@@ -60,7 +70,9 @@ describe('FlashSaleQueryCache', () => {
       get: jest.fn().mockReturnValue(ttlSeconds),
     } as unknown as ConfigService<AppEnv, true>;
     const flashSales = {
-      findById: jest.fn().mockResolvedValue(flashSale),
+      findById: jest.fn(),
+      findAllForCatalog: jest.fn(),
+      findByIdWithProduct: jest.fn().mockResolvedValue({ flashSale, product }),
       ...deps.flashSales,
     } as unknown as FlashSaleRepository;
     const redis = {
@@ -79,13 +91,14 @@ describe('FlashSaleQueryCache', () => {
     };
   }
 
-  it('miss → loads via repository, maps snapshot, set with TTL', async () => {
+  it('miss → loads via findByIdWithProduct, maps snapshot, set with TTL', async () => {
     const { cache, flashSales, redis } = createCache({});
 
     const result = await cache.getById(saleId);
 
     expect(result).toEqual(expectedSnapshot);
-    expect(flashSales.findById).toHaveBeenCalledWith(saleId);
+    expect(flashSales.findByIdWithProduct).toHaveBeenCalledWith(saleId);
+    expect(flashSales.findById).not.toHaveBeenCalled();
     expect(redis.set).toHaveBeenCalledWith(cacheKey, JSON.stringify(expectedSnapshot), ttlSeconds);
   });
 
@@ -93,6 +106,11 @@ describe('FlashSaleQueryCache', () => {
     const staleSnapshot = {
       id: 'sale-1',
       endsAt: '2026-07-28T14:00:00.000Z',
+      product: {
+        id: 'product-1',
+        description: 'stale',
+        name: 'Cached Widget',
+      },
       remainingStock: 1,
       startsAt: '2026-07-28T10:00:00.000Z',
       status: 'SOLD_OUT' as const,
@@ -108,12 +126,63 @@ describe('FlashSaleQueryCache', () => {
     const result = await cache.getById(saleId);
 
     expect(result).toEqual(staleSnapshot);
+    expect(flashSales.findByIdWithProduct).not.toHaveBeenCalled();
     expect(flashSales.findById).not.toHaveBeenCalled();
     expect(nowUtcSpy).not.toHaveBeenCalled();
     expect(getStatusSpy).not.toHaveBeenCalled();
     expect(redis.set).not.toHaveBeenCalled();
 
     getStatusSpy.mockRestore();
+  });
+
+  it('legacy snapshot without product → findByIdWithProduct and rewrite', async () => {
+    const legacySnapshot = {
+      id: 'sale-1',
+      endsAt: '2026-07-28T14:00:00.000Z',
+      remainingStock: 3,
+      startsAt: '2026-07-28T10:00:00.000Z',
+      status: 'ACTIVE' as const,
+      totalStock: 5,
+    };
+    const { cache, flashSales, redis } = createCache({
+      redis: { get: jest.fn().mockResolvedValue(JSON.stringify(legacySnapshot)) },
+    });
+
+    const result = await cache.getById(saleId);
+
+    expect(result).toEqual(expectedSnapshot);
+    expect(flashSales.findByIdWithProduct).toHaveBeenCalledWith(saleId);
+    expect(redis.set).toHaveBeenCalledWith(cacheKey, JSON.stringify(expectedSnapshot), ttlSeconds);
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: REDIS_CACHE_DEGRADED,
+        op: 'get',
+        reason: 'invalid_payload',
+      }),
+    );
+  });
+
+  it('snapshot with invalid status → findByIdWithProduct and rewrite', async () => {
+    const invalidStatusSnapshot = {
+      ...expectedSnapshot,
+      status: 'INVALID_STATUS',
+    };
+    const { cache, flashSales, redis } = createCache({
+      redis: { get: jest.fn().mockResolvedValue(JSON.stringify(invalidStatusSnapshot)) },
+    });
+
+    const result = await cache.getById(saleId);
+
+    expect(result).toEqual(expectedSnapshot);
+    expect(flashSales.findByIdWithProduct).toHaveBeenCalledWith(saleId);
+    expect(redis.set).toHaveBeenCalledWith(cacheKey, JSON.stringify(expectedSnapshot), ttlSeconds);
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: REDIS_CACHE_DEGRADED,
+        op: 'get',
+        reason: 'invalid_payload',
+      }),
+    );
   });
 
   it('Redis get throws → redis_cache_degraded reason redis_error → Postgres', async () => {
@@ -124,7 +193,7 @@ describe('FlashSaleQueryCache', () => {
     const result = await cache.getById(saleId);
 
     expect(result).toEqual(expectedSnapshot);
-    expect(flashSales.findById).toHaveBeenCalledWith(saleId);
+    expect(flashSales.findByIdWithProduct).toHaveBeenCalledWith(saleId);
     expect(warnSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         event: REDIS_CACHE_DEGRADED,
@@ -143,7 +212,7 @@ describe('FlashSaleQueryCache', () => {
     const result = await cache.getById(saleId);
 
     expect(result).toEqual(expectedSnapshot);
-    expect(flashSales.findById).toHaveBeenCalledWith(saleId);
+    expect(flashSales.findByIdWithProduct).toHaveBeenCalledWith(saleId);
     expect(warnSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         event: REDIS_CACHE_DEGRADED,
@@ -162,7 +231,7 @@ describe('FlashSaleQueryCache', () => {
     const result = await cache.getById(saleId);
 
     expect(result).toEqual(expectedSnapshot);
-    expect(flashSales.findById).toHaveBeenCalledWith(saleId);
+    expect(flashSales.findByIdWithProduct).toHaveBeenCalledWith(saleId);
     expect(warnSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         event: REDIS_CACHE_DEGRADED,

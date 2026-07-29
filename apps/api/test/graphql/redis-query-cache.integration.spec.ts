@@ -142,8 +142,8 @@ const PURCHASE_ITEM_MUTATION = `
 
 describe('Redis query-cache GraphQL integration', () => {
   const counters = {
-    findById: 0,
     findByFlashSaleAndUser: 0,
+    findByIdWithProduct: 0,
   };
 
   let app: INestApplication;
@@ -152,7 +152,7 @@ describe('Redis query-cache GraphQL integration', () => {
 
   beforeAll(async () => {
     counters.findByFlashSaleAndUser = 0;
-    counters.findById = 0;
+    counters.findByIdWithProduct = 0;
 
     const moduleRef = await Test.createTestingModule({
       imports: [AppModule],
@@ -161,13 +161,13 @@ describe('Redis query-cache GraphQL integration', () => {
       .useFactory({
         factory: (inner: PrismaFlashSaleRepository): FlashSaleRepository => ({
           async findById(id: FlashSaleId) {
-            counters.findById += 1;
             return inner.findById(id);
           },
           async findAllForCatalog() {
             return inner.findAllForCatalog();
           },
           async findByIdWithProduct(id: FlashSaleId) {
+            counters.findByIdWithProduct += 1;
             return inner.findByIdWithProduct(id);
           },
         }),
@@ -205,9 +205,9 @@ describe('Redis query-cache GraphQL integration', () => {
     await app.close();
   });
 
-  it('serves flashSale from Redis after warm and still findById=1 on second hit', async () => {
+  it('serves flashSale from Redis after warm and still findByIdWithProduct=1 on second hit', async () => {
     const suffix = randomUUID();
-    counters.findById = 0;
+    counters.findByIdWithProduct = 0;
 
     try {
       const flashSaleId = await seedFlashSale(prisma, {
@@ -224,7 +224,7 @@ describe('Redis query-cache GraphQL integration', () => {
       });
       expect(first.errors).toBeUndefined();
       expect(first.data?.flashSale.id).toBe(flashSaleId);
-      expect(counters.findById).toBe(1);
+      expect(counters.findByIdWithProduct).toBe(1);
 
       const second = await postGraphql<{ flashSale: { id: string } }>(app, {
         query: FLASH_SALE_QUERY,
@@ -232,7 +232,7 @@ describe('Redis query-cache GraphQL integration', () => {
       });
       expect(second.errors).toBeUndefined();
       expect(second.data?.flashSale.id).toBe(flashSaleId);
-      expect(counters.findById).toBe(1);
+      expect(counters.findByIdWithProduct).toBe(1);
 
       await expect(inspector.get(flashSaleCacheKey(flashSaleId))).resolves.not.toBeNull();
     } finally {
@@ -362,7 +362,7 @@ describe('Redis query-cache GraphQL integration', () => {
     const suffix = randomUUID();
     const userA = `userA-redis-inv-${suffix}`;
     const userB = `userB-redis-inv-${suffix}`;
-    counters.findById = 0;
+    counters.findByIdWithProduct = 0;
 
     try {
       const flashSaleId = await seedFlashSale(prisma, {
@@ -377,7 +377,7 @@ describe('Redis query-cache GraphQL integration', () => {
         query: FLASH_SALE_QUERY,
         variables: { id: flashSaleId },
       });
-      expect(counters.findById).toBe(1);
+      expect(counters.findByIdWithProduct).toBe(1);
       await expect(inspector.get(flashSaleCacheKey(flashSaleId))).resolves.not.toBeNull();
 
       await postGraphql(app, {
@@ -404,14 +404,14 @@ describe('Redis query-cache GraphQL integration', () => {
       await expect(inspector.get(myPurchaseCacheKey(flashSaleId, userA))).resolves.toBeNull();
       await expect(inspector.get(myPurchaseCacheKey(flashSaleId, userB))).resolves.not.toBeNull();
 
-      const findByIdAfterPurchase = counters.findById;
+      const findByIdAfterPurchase = counters.findByIdWithProduct;
       const after = await postGraphql<{ flashSale: { id: string; remainingStock: number } }>(app, {
         query: FLASH_SALE_QUERY,
         variables: { id: flashSaleId },
       });
       expect(after.errors).toBeUndefined();
       expect(after.data?.flashSale.id).toBe(flashSaleId);
-      expect(counters.findById).toBe(findByIdAfterPurchase + 1);
+      expect(counters.findByIdWithProduct).toBe(findByIdAfterPurchase + 1);
     } finally {
       await cleanupFlashSale(prisma, suffix);
       await inspector.del(
