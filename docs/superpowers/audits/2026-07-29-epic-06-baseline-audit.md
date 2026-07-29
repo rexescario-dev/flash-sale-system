@@ -72,3 +72,10 @@ Note: `pnpm --filter api prisma:generate` required once in the fresh worktree be
 3. E2E seeder (#43) + Playwright (#49–#52) + CI
 
 No satisfied-child rewrites.
+
+## E2E runtime prerequisites (Task 4 validation)
+
+Discovered while bringing up the **built** NestJS process for real-stack Playwright (not E2E-only workarounds):
+
+1. **`@flash-sale/domain` CJS resolution** — Nest emits CommonJS and `require("@flash-sale/domain")`, but the package export map previously exposed only the ESM `import` condition (`ERR_PACKAGE_PATH_NOT_EXPORTED`). Fixed by emitting CommonJS and advertising `require`/`import`/`default` at the package boundary. Jest path mapping was never a substitute for production start.
+2. **API CORS** — SPA on `:5173` calling GraphQL on `:3000`/`:3001` is cross-origin. Without `app.enableCors(...)`, the browser reports a network failure (`Could not load sale`). Enabled reflective CORS in `apps/api/src/main.ts` so the real process matches the intended local/E2E topology.
