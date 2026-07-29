@@ -56,7 +56,7 @@ packages/
 
 ## Redis / local stack
 
-`docker compose up -d` starts PostgreSQL and Redis (`REDIS_URL=redis://localhost:6379`). Redis is non-authoritative: query cache for `flashSale` / `myPurchase` plus IP rate limiting for `purchaseItem`, with fail-open fallback to Postgres. See [docs/redis-caching-strategy.md](docs/redis-caching-strategy.md).
+`docker compose up -d` starts PostgreSQL and Redis as containers `flash-sale-postgres` and `flash-sale-redis` (`REDIS_URL=redis://localhost:6379`). Redis is non-authoritative: query cache for `flashSale` / `myPurchase` plus IP rate limiting for `purchaseItem`, with fail-open fallback to Postgres. See [docs/redis-caching-strategy.md](docs/redis-caching-strategy.md).
 
 ## E2E
 

@@ -1,6 +1,9 @@
+name: flash-sale
+
 services:
   postgres:
     image: postgres:16-alpine
+    container_name: flash-sale-postgres
     environment:
       POSTGRES_USER: flash_sale
       POSTGRES_PASSWORD: flash_sale_dev
@@ -15,6 +18,7 @@ services:
 
   redis:
     image: redis:7-alpine
+    container_name: flash-sale-redis
     ports:
       - '6379:6379'
     healthcheck:
