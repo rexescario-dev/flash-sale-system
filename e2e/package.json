@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.0",
   "scripts": {
-    "test": "playwright test",
+    "test:e2e": "playwright test",
     "test:smoke": "playwright test --project=smoke",
     "test:regression": "playwright test --project=regression"
   },
