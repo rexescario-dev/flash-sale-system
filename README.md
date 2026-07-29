@@ -6,20 +6,43 @@ A scalable flash-sale system built with NestJS, GraphQL, React, TypeScript, Post
 
 ## Requirements
 
-- Node.js 20 (`>=20 <23`) — see `.nvmrc`
-- [pnpm](https://pnpm.io) 10+
-- Docker (for PostgreSQL + Redis)
+- Docker (Docker Compose) for the full local application stack
+- Node.js 20 (`>=20 <23`) and [pnpm](https://pnpm.io) 10+ only if you use existing non-Compose tooling (quality scripts, E2E helpers, etc.)
 
-## Setup
+## Local stack
+
+### Full Compose stack
 
 ```bash
 cp .env.example .env
-pnpm install
-docker compose up -d
-pnpm --filter api prisma:generate
+docker compose up --build
 ```
 
-Keep `.env` at the **repository root** (not `apps/api/`). `pnpm dev` loads it from there.
+Starts the complete five-service stack:
+
+- `flash-sale-postgres`
+- `flash-sale-redis`
+- `flash-sale-migrate` — one-shot Prisma migration; exits with code 0
+- `flash-sale-api`
+- `flash-sale-web` — serves the production web build with `vite preview`
+
+No Node.js or pnpm installation is required on the host for this workflow.
+
+Source changes require rebuilding the images:
+
+```bash
+docker compose up --build
+```
+
+Endpoints:
+
+- Web: http://localhost:5173
+- API: http://localhost:3000
+- GraphQL: http://localhost:3000/graphql
+
+The API container connects to PostgreSQL and Redis using Compose service DNS (`postgres:5432`, `redis:6379`). The web build bakes `VITE_API_URL=http://localhost:3000` for the host browser.
+
+Keep `.env` at the **repository root** (not `apps/api/`). Compose loads non-infra knobs via `env_file` and overrides `DATABASE_URL`, `REDIS_URL`, and API `PORT=3000` for containers.
 
 ## Scripts
 
@@ -56,9 +79,9 @@ packages/
 - GraphQL (dev sandbox): `http://localhost:3000/graphql`
 - Web: `http://localhost:5173`
 
-## Redis / local stack
+## Redis
 
-`docker compose up -d` starts PostgreSQL and Redis as containers `flash-sale-postgres` and `flash-sale-redis` (`REDIS_URL=redis://localhost:6379`). Redis is non-authoritative: query cache for `flashSale` / `myPurchase` plus IP rate limiting for `purchaseItem`, with fail-open fallback to Postgres. See [docs/redis-caching-strategy.md](docs/redis-caching-strategy.md).
+Redis is non-authoritative: query cache for `flashSale` / `myPurchase` plus IP rate limiting for `purchaseItem`, with fail-open fallback to Postgres. See [docs/redis-caching-strategy.md](docs/redis-caching-strategy.md). In the full Compose stack the API uses `redis://redis:6379` (Compose DNS).
 
 ## E2E
 
