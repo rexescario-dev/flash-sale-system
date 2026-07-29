@@ -1,47 +1,34 @@
-import {
-  FlashSale,
-  type FlashSaleId,
-  FlashSaleNotFoundError,
-  type FlashSaleRepository,
-  type ProductId,
-} from '@flash-sale/domain';
+import { FlashSaleNotFoundError } from '@flash-sale/domain';
 
-import type { Clock } from '../graphql/clock';
+import type { FlashSaleCacheSnapshot, FlashSaleQueryCache } from './flash-sale-query.cache';
 
 import { FlashSaleResolver } from './flash-sale.resolver';
 
 describe('FlashSaleResolver', () => {
-  const nowUtc = new Date('2026-07-28T12:00:00.000Z');
-  const clock: Clock = { nowUtc: () => nowUtc };
-
-  function build(repo: Partial<FlashSaleRepository>) {
-    return new FlashSaleResolver(repo as FlashSaleRepository, clock);
+  function build(cache: Partial<FlashSaleQueryCache>) {
+    return new FlashSaleResolver(cache as FlashSaleQueryCache);
   }
 
-  it('maps domain FlashSale using injected clock for status', async () => {
-    const nowUtcSpy = jest.fn(() => nowUtc);
-    const clockWithSpy: Clock = { nowUtc: nowUtcSpy };
-    const flashSale = FlashSale.reconstitute({
-      id: 'sale-1' as FlashSaleId,
-      productId: 'product-1' as ProductId, // domain fixture only — must never appear in GraphQL output
-      endsAt: new Date('2026-07-28T14:00:00.000Z'),
+  it('maps cached snapshot dates to Date for GraphQL', async () => {
+    const snapshot: FlashSaleCacheSnapshot = {
+      id: 'sale-1',
+      endsAt: '2026-07-28T14:00:00.000Z',
       remainingStock: 3,
-      startsAt: new Date('2026-07-28T10:00:00.000Z'),
+      startsAt: '2026-07-28T10:00:00.000Z',
+      status: 'ACTIVE',
       totalStock: 5,
-    });
-    const resolver = new FlashSaleResolver(
-      { findById: jest.fn().mockResolvedValue(flashSale) } as unknown as FlashSaleRepository,
-      clockWithSpy,
-    );
+    };
+    const getById = jest.fn().mockResolvedValue(snapshot);
+    const resolver = build({ getById });
 
     const result = await resolver.flashSale('sale-1');
 
-    expect(nowUtcSpy).toHaveBeenCalledTimes(1);
+    expect(getById).toHaveBeenCalledWith('sale-1');
     expect(result).toEqual({
       id: 'sale-1',
-      endsAt: flashSale.getEndsAt(),
+      endsAt: new Date('2026-07-28T14:00:00.000Z'),
       remainingStock: 3,
-      startsAt: flashSale.getStartsAt(),
+      startsAt: new Date('2026-07-28T10:00:00.000Z'),
       status: 'ACTIVE',
       totalStock: 5,
     });
@@ -50,21 +37,21 @@ describe('FlashSaleResolver', () => {
 
   it('throws FlashSaleNotFoundError when missing', async () => {
     const resolver = build({
-      findById: jest.fn().mockResolvedValue(null),
+      getById: jest.fn().mockResolvedValue(null),
     });
     await expect(resolver.flashSale('missing')).rejects.toBeInstanceOf(FlashSaleNotFoundError);
   });
 
   it.each(['', ' ', '\t', '\n', '   '])(
-    'rejects whitespace-only id %j before repository',
+    'rejects whitespace-only id %j before cache',
     async (raw) => {
-      const findById = jest.fn();
-      const resolver = build({ findById });
+      const getById = jest.fn();
+      const resolver = build({ getById });
 
       await expect(resolver.flashSale(raw)).rejects.toMatchObject({
         code: 'BAD_USER_INPUT',
       });
-      expect(findById).not.toHaveBeenCalled();
+      expect(getById).not.toHaveBeenCalled();
     },
   );
 });

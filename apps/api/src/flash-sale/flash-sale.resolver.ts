@@ -1,42 +1,30 @@
-import {
-  FLASH_SALE_REPOSITORY,
-  FlashSaleNotFoundError,
-  type FlashSaleRepository,
-} from '@flash-sale/domain';
-import { Inject } from '@nestjs/common';
+import { FlashSaleNotFoundError } from '@flash-sale/domain';
 import { Args, ID, Query, Resolver } from '@nestjs/graphql';
 
-import { CLOCK, type Clock } from '../graphql/clock';
 import { requireId } from '../graphql/id-validation';
-import { toFlashSaleStatusGql } from './graphql/flash-sale-status.mapper';
+import { FlashSaleQueryCache } from './flash-sale-query.cache';
+import { FlashSaleStatusGql } from './graphql/flash-sale-status.enum';
 import { FlashSaleObjectType } from './graphql/flash-sale.object-type';
 
 @Resolver()
 export class FlashSaleResolver {
-  constructor(
-    @Inject(FLASH_SALE_REPOSITORY)
-    private readonly flashSaleRepository: FlashSaleRepository,
-    @Inject(CLOCK)
-    private readonly clock: Clock,
-  ) {}
+  constructor(private readonly flashSaleQueryCache: FlashSaleQueryCache) {}
 
   @Query(() => FlashSaleObjectType, { name: 'flashSale' })
   async flashSale(@Args('id', { type: () => ID }) id: string): Promise<FlashSaleObjectType> {
     const flashSaleId = requireId(id);
-    const flashSale = await this.flashSaleRepository.findById(flashSaleId);
-    if (flashSale === null) {
+    const snapshot = await this.flashSaleQueryCache.getById(flashSaleId);
+    if (snapshot === null) {
       throw new FlashSaleNotFoundError();
     }
 
-    const status = toFlashSaleStatusGql(flashSale.getStatus(this.clock.nowUtc()));
-
     return {
-      id: flashSale.getId(),
-      endsAt: flashSale.getEndsAt(),
-      remainingStock: flashSale.getRemainingStock(),
-      startsAt: flashSale.getStartsAt(),
-      status,
-      totalStock: flashSale.getTotalStock(),
+      id: snapshot.id,
+      endsAt: new Date(snapshot.endsAt),
+      remainingStock: snapshot.remainingStock,
+      startsAt: new Date(snapshot.startsAt),
+      status: snapshot.status as FlashSaleStatusGql,
+      totalStock: snapshot.totalStock,
     };
   }
 }
