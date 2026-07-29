@@ -13,7 +13,9 @@
     "test": "turbo run test",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,mjs,cjs,json,md,yml,yaml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mjs,cjs,json,md,yml,yaml}\"",
-    "prepare": "husky"
+    "prepare": "husky",
+    "e2e": "pnpm --filter @flash-sale/e2e test",
+    "e2e:smoke": "pnpm --filter @flash-sale/e2e test:smoke"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,mjs,cjs}": [
