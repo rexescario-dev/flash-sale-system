@@ -3,6 +3,7 @@ import { Logger } from '@nestjs/common';
 import { GraphQLError } from 'graphql';
 
 import { GraphqlBadUserInputError } from './graphql-bad-user-input.error';
+import { GraphqlRateLimitedError } from './graphql-rate-limited.error';
 
 const logger = new Logger('mapGraphqlError');
 
@@ -30,6 +31,12 @@ export function mapGraphqlError(exception: unknown): GraphQLError {
   if (exception instanceof GraphqlBadUserInputError) {
     return new GraphQLError(exception.message, {
       extensions: { code: 'BAD_USER_INPUT' },
+    });
+  }
+
+  if (exception instanceof GraphqlRateLimitedError) {
+    return new GraphQLError(exception.message, {
+      extensions: { code: 'RATE_LIMITED' },
     });
   }
 
