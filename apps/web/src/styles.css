@@ -42,3 +42,53 @@ h1 {
   color: #3d4f47;
   max-width: 32rem;
 }
+
+.muted {
+  color: #5a6b63;
+  font-size: 0.9rem;
+}
+
+label {
+  display: block;
+  margin: 1.25rem 0 0.35rem;
+  font-weight: 600;
+}
+
+input {
+  width: 100%;
+  max-width: 24rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid #9bb3a6;
+  border-radius: 0.35rem;
+  font: inherit;
+}
+
+button {
+  margin-top: 1rem;
+  margin-right: 0.5rem;
+  padding: 0.6rem 1.1rem;
+  border: 0;
+  border-radius: 0.35rem;
+  background: #2e7d5a;
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+section {
+  margin-top: 1.5rem;
+}
+
+[role='alert'],
+[role='status'] {
+  margin-top: 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 0.35rem;
+  background: rgba(255, 255, 255, 0.65);
+}
