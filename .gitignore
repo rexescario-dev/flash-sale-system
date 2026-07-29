@@ -28,5 +28,6 @@ pnpm-debug.log*
 
 # Generated
 apps/api/schema.gql
+e2e/seed-state.json
 
 .worktrees/
