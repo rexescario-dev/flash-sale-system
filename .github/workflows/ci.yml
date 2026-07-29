@@ -62,3 +62,116 @@ jobs:
       - run: pnpm --filter api prisma:migrate:deploy
       - run: pnpm --filter api test:schema
       - run: pnpm --filter api test:integration
+
+  # Option A: both e2e-smoke and e2e-full required on PRs (and on main pushes).
+  # Canonical seed is Playwright globalSetup only — do not pre-run e2e:seed here.
+  e2e-smoke:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: flash_sale
+          POSTGRES_PASSWORD: flash_sale_dev
+          POSTGRES_DB: flash_sale
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U flash_sale -d flash_sale"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://flash_sale:flash_sale_dev@localhost:5432/flash_sale
+      REDIS_URL: redis://localhost:6379
+      E2E_BASE_URL: http://127.0.0.1:5173
+      E2E_API_HEALTH_URL: http://127.0.0.1:3000/health
+      E2E_SEED_STATE_PATH: ${{ github.workspace }}/e2e/seed-state.json
+      VITE_API_URL: http://127.0.0.1:3000
+      PORT: 3000
+      RATE_LIMIT_PURCHASE_ITEM_MAX: '200'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @flash-sale/domain build
+      - run: pnpm --filter api prisma:generate
+      - run: pnpm --filter api prisma:migrate:deploy
+      - run: pnpm --filter api build
+      - run: pnpm --filter web build
+      - name: Start API + web preview
+        run: |
+          pnpm --filter api start &
+          pnpm --filter web exec vite preview --host 127.0.0.1 --port 5173 &
+          npx --yes wait-on http://127.0.0.1:3000/health http://127.0.0.1:5173
+      - run: pnpm --filter @flash-sale/e2e exec playwright install chromium --with-deps
+      - run: pnpm e2e:smoke
+
+  e2e-full:
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: flash_sale
+          POSTGRES_PASSWORD: flash_sale_dev
+          POSTGRES_DB: flash_sale
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U flash_sale -d flash_sale"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://flash_sale:flash_sale_dev@localhost:5432/flash_sale
+      REDIS_URL: redis://localhost:6379
+      E2E_BASE_URL: http://127.0.0.1:5173
+      E2E_API_HEALTH_URL: http://127.0.0.1:3000/health
+      E2E_SEED_STATE_PATH: ${{ github.workspace }}/e2e/seed-state.json
+      VITE_API_URL: http://127.0.0.1:3000
+      PORT: 3000
+      RATE_LIMIT_PURCHASE_ITEM_MAX: '200'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @flash-sale/domain build
+      - run: pnpm --filter api prisma:generate
+      - run: pnpm --filter api prisma:migrate:deploy
+      - run: pnpm --filter api build
+      - run: pnpm --filter web build
+      - name: Start API + web preview
+        run: |
+          pnpm --filter api start &
+          pnpm --filter web exec vite preview --host 127.0.0.1 --port 5173 &
+          npx --yes wait-on http://127.0.0.1:3000/health http://127.0.0.1:5173
+      - run: pnpm --filter @flash-sale/e2e exec playwright install chromium --with-deps
+      - run: pnpm e2e
