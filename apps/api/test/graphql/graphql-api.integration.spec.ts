@@ -166,8 +166,9 @@ describe('GraphQL API integration (#26) - persistence suite', () => {
     );
 
     expect(typeFields.get('FlashSale')).toEqual(
-      new Set(['id', 'status', 'remainingStock', 'totalStock', 'startsAt', 'endsAt']),
+      new Set(['id', 'product', 'status', 'remainingStock', 'totalStock', 'startsAt', 'endsAt']),
     );
+    expect(typeFields.get('Product')).toEqual(new Set(['id', 'name', 'description']));
     expect(typeFields.get('MyPurchaseResult')).toEqual(
       new Set(['purchased', 'purchaseId', 'purchasedAt']),
     );

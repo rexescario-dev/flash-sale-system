@@ -8,7 +8,10 @@ export type {
   FlashSaleStatus,
 } from './flash-sale/flash-sale.js';
 export { FLASH_SALE_REPOSITORY } from './flash-sale/flash-sale.repository.js';
-export type { FlashSaleRepository } from './flash-sale/flash-sale.repository.js';
+export type {
+  FlashSaleRepository,
+  FlashSaleWithProduct,
+} from './flash-sale/flash-sale.repository.js';
 export { FLASH_SALE_RESERVATION } from './flash-sale/flash-sale.reservation.js';
 export type { FlashSaleReservation } from './flash-sale/flash-sale.reservation.js';
 export type { FlashSaleId, ProductId, PurchaseId, UserId } from './ids.js';

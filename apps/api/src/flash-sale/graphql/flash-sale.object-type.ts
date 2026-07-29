@@ -1,6 +1,7 @@
 import { Field, GraphQLISODateTime, ID, Int, ObjectType } from '@nestjs/graphql';
 
 import { FlashSaleStatusGql } from './flash-sale-status.enum';
+import { ProductObjectType } from './product.object-type';
 
 @ObjectType('FlashSale')
 export class FlashSaleObjectType {
@@ -9,6 +10,9 @@ export class FlashSaleObjectType {
 
   @Field(() => ID)
   id!: string;
+
+  @Field(() => ProductObjectType)
+  product!: ProductObjectType;
 
   @Field(() => Int)
   remainingStock!: number;
