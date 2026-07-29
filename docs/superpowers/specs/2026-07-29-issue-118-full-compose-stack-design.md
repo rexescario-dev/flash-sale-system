@@ -1,6 +1,6 @@
 # Issue #118 — Full Local Application Stack in Docker Compose (Design Spec)
 
-**Status:** Draft (pending user review — revised after feedback)
+**Status:** Approved
 **Date:** 2026-07-29
 **Issue:** [#118](https://github.com/rexescario-dev/flash-sale-system/issues/118)
 **Repository:** `rexescario-dev/flash-sale-system`
@@ -39,29 +39,29 @@ Then:
 
 ## Locked decisions
 
-| Area                          | Decision                                                                                                                                                               |
-| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Scope framing                 | Separate DX/infra issue; do not fold into EPIC-01                                                                                                                      |
-| Web serve                     | `vite preview` on `0.0.0.0:5173` (not nginx/Caddy; not `vite dev`)                                                                                                     |
-| Dockerfile layout             | Single root multi-stage `Dockerfile` with dedicated targets: `api`, `web`, `migrate`                                                                                   |
-| pnpm                          | Corepack + `pnpm@10.30.3` (match root `packageManager`); images install with `pnpm install --frozen-lockfile`                                                          |
-| Runtime dependency packaging  | Prefer `pnpm deploy --prod` for isolated API (and web if workable); fall back to preserving the required workspace `node_modules` layout if deploy is awkward          |
-| Compose project               | `name: flash-sale` (unchanged from #117)                                                                                                                               |
-| Service keys                  | `postgres`, `redis`, `migrate`, `api`, `web`                                                                                                                           |
-| Container names               | `flash-sale-postgres`, `flash-sale-redis`, `flash-sale-migrate`, `flash-sale-api`, `flash-sale-web`                                                                    |
-| Internal DNS                  | API/migrate use `postgres:5432` and `redis:6379` (service names, not container names)                                                                                  |
-| Browser API URL               | `VITE_API_URL=http://localhost:3000` (build-time bake; never Docker-internal DNS)                                                                                      |
-| Infra-only workflow           | Explicit: `docker compose up -d postgres redis` then host `pnpm dev`                                                                                                   |
-| Full-stack workflow           | Explicit: `docker compose up --build`                                                                                                                                  |
-| Migrate vs API                | Dedicated migrate target/service; `restart: "no"`; api waits for `service_completed_successfully`                                                                      |
-| API runtime CMD               | `node apps/api/dist/main.js` (Node + compiled app + prod deps; not `pnpm start`)                                                                                       |
-| API published port            | Compose always sets `PORT=3000` to match `ports: ["3000:3000"]` and healthcheck                                                                                        |
-| Web runtime                   | Keeps tooling needed for `pnpm --filter web preview …`                                                                                                                 |
-| API healthcheck               | **In scope** — `GET /health` via healthcheck; web depends on `api` `service_healthy` as a **full-stack readiness convenience** (not a Vite preview network dependency) |
-| Env precedence                | Use `.env` for non-infra config; explicitly override container values that must match Compose networking/ports (`DATABASE_URL`, `REDIS_URL`, `PORT=3000`)              |
-| Migrate env                   | Self-sufficient from Compose env (no baked `.env`); verify `prisma:migrate:deploy` needs (at least `DATABASE_URL`; add `NODE_ENV`/other only if required)              |
-| Migrate ↔ API DB              | Same Compose PostgreSQL credentials/database for both services                                                                                                         |
-| Profiles / nginx / AuthN / k6 | Out of scope                                                                                                                                                           |
+| Area                          | Decision                                                                                                                                                                 |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Scope framing                 | Separate DX/infra issue; do not fold into EPIC-01                                                                                                                        |
+| Web serve                     | `vite preview` on `0.0.0.0:5173` (not nginx/Caddy; not `vite dev`)                                                                                                       |
+| Dockerfile layout             | Single root multi-stage `Dockerfile` with dedicated targets: `api`, `web`, `migrate`                                                                                     |
+| pnpm                          | Corepack + `pnpm@10.30.3` (match root `packageManager`); images install with `pnpm install --frozen-lockfile`                                                            |
+| Runtime dependency packaging  | Prefer `pnpm deploy --prod` for isolated API (and web if workable); fall back to preserving the required workspace `node_modules` layout if deploy is awkward            |
+| Compose project               | `name: flash-sale` (unchanged from #117)                                                                                                                                 |
+| Service keys                  | `postgres`, `redis`, `migrate`, `api`, `web`                                                                                                                             |
+| Container names               | `flash-sale-postgres`, `flash-sale-redis`, `flash-sale-migrate`, `flash-sale-api`, `flash-sale-web`                                                                      |
+| Internal DNS                  | API/migrate use `postgres:5432` and `redis:6379` (service names, not container names)                                                                                    |
+| Browser API URL               | `VITE_API_URL=http://localhost:3000` (build-time bake; never Docker-internal DNS)                                                                                        |
+| Documented local workflow     | `docker compose up --build` only for #118; no host Node/pnpm required. Existing postgres/redis services remain for compatibility; do not add/document `pnpm dev` in #118 |
+| Full-stack workflow           | Explicit: `docker compose up --build`                                                                                                                                    |
+| Migrate vs API                | Dedicated migrate target/service; `restart: "no"`; api waits for `service_completed_successfully`                                                                        |
+| API runtime CMD               | `node apps/api/dist/main.js` (Node + compiled app + prod deps; not `pnpm start`)                                                                                         |
+| API published port            | Compose always sets `PORT=3000` to match `ports: ["3000:3000"]` and healthcheck                                                                                          |
+| Web runtime                   | Keeps tooling needed for `pnpm --filter web preview …`                                                                                                                   |
+| API healthcheck               | **In scope** — `GET /health` via healthcheck; web depends on `api` `service_healthy` as a **full-stack readiness convenience** (not a Vite preview network dependency)   |
+| Env precedence                | Use `.env` for non-infra config; explicitly override container values that must match Compose networking/ports (`DATABASE_URL`, `REDIS_URL`, `PORT=3000`)                |
+| Migrate env                   | Self-sufficient from Compose env (no baked `.env`); verify `prisma:migrate:deploy` needs (at least `DATABASE_URL`; add `NODE_ENV`/other only if required)                |
+| Migrate ↔ API DB              | Same Compose PostgreSQL credentials/database for both services                                                                                                           |
+| Profiles / nginx / AuthN / k6 | Out of scope                                                                                                                                                             |
 
 ## Architecture
 
@@ -151,15 +151,11 @@ web:
 ### Workflows
 
 ```bash
-# Host-based development (infra only)
-docker compose up -d postgres redis
-pnpm dev
-
-# Full containerized stack (no hot reload; rebuild images after source changes)
+# Full containerized stack (documented #118 workflow; no hot reload)
 docker compose up --build
 ```
 
-With five services defined, plain `docker compose up` starts **all** services. Document the two explicit workflows above; do not imply infra-only is the “default with only those started.”
+#118 documents only the full Compose workflow. Existing `postgres`/`redis` services remain available for any pre-existing host workflows, but #118 does not add or document `pnpm dev`. With five services defined, plain `docker compose up` starts **all** services.
 
 ### Environment precedence
 
@@ -212,7 +208,7 @@ build-web
 
 api (runtime)
 ├── Node
-├── compiled API + compiled domain
+├── compiled API + required compiled workspace packages (including domain, if emitted separately)
 ├── Prisma client
 ├── production dependencies (see packaging path below)
 └── CMD: node apps/api/dist/main.js
@@ -265,10 +261,10 @@ Do **not** exclude `apps/api/prisma/schema.prisma` or `apps/api/prisma/migration
 
 ### Docs
 
-| File           | Change                                                                                                                                                                                                 |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| README         | Document infra-only vs full-stack workflows; endpoints; state that the full Compose stack has **no hot reload** — source changes require rebuilding web/API images; note migrate is one-shot and exits |
-| `.env.example` | Comment that Compose overrides DB/Redis URLs and API `PORT` inside containers; host localhost values remain for `pnpm`                                                                                 |
+| File           | Change                                                                                                                                                                              |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| README         | Document full Compose `docker compose up --build` workflow (no host Node/pnpm required); endpoints; no hot reload; migrate one-shot exits. Do not add `pnpm dev` as a #118 workflow |
+| `.env.example` | Comment that Compose overrides DB/Redis URLs and API `PORT` inside containers; host localhost values remain for `pnpm`                                                              |
 
 ### Acceptance criteria (from #118 + design lock)
 
@@ -281,8 +277,8 @@ Do **not** exclude `apps/api/prisma/schema.prisma` or `apps/api/prisma/migration
 - [ ] `VITE_API_URL` is browser-reachable (not Docker-internal DNS)
 - [ ] API and web images install dependencies using pnpm
 - [ ] New services use `flash-sale-*` container names
-- [ ] Infra-only workflow (`docker compose up -d postgres redis` + host `pnpm`) still works
-- [ ] README documents one-command Compose vs host `pnpm dev`
+- [ ] Existing `postgres`/`redis` services still start alone (`docker compose up -d postgres redis`)
+- [ ] README documents the one-command full Compose path (no host `pnpm`/`pnpm dev` workflow added)
 - [ ] Fresh volume start works (`docker compose down -v` then `up --build`)
 - [ ] API healthcheck + web waits for api healthy
 - [ ] API container listens on `PORT=3000` matching published ports/healthcheck
@@ -295,7 +291,7 @@ Do **not** exclude `apps/api/prisma/schema.prisma` or `apps/api/prisma/migration
 3. **API** — `GET /health` → 200; GraphQL endpoint accessible
 4. **Web** — `http://localhost:5173` loads
 5. **Browser networking** — GraphQL from the page targets `localhost:3000`, not Compose DNS names
-6. **Infra-only** — `docker compose down` then `docker compose up -d postgres redis` + `pnpm dev` still viable
+6. **Postgres/redis alone** — `docker compose down` then `docker compose up -d postgres redis` still works (no host `pnpm` verification required for #118)
 7. **Naming** — containers are `flash-sale-{postgres,redis,migrate,api,web}`
 8. **Migrate failure gate** — temporarily force migrate to fail; confirm migrate exits non-zero and api does not start (manual implementation verification; not a permanent automated suite)
 
