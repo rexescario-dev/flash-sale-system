@@ -57,4 +57,21 @@ describe('PrismaFlashSaleRepository', () => {
       code: 'REMAINING_STOCK_EXCEEDS_TOTAL',
     });
   });
+
+  it('findAllForCatalog uses findMany with include product and does not call findUnique', async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const findUnique = jest.fn();
+    const prisma = {
+      flashSale: { findMany, findUnique },
+    } as unknown as PrismaService;
+    const repo = new PrismaFlashSaleRepository(prisma);
+
+    await expect(repo.findAllForCatalog()).resolves.toEqual([]);
+
+    expect(findMany).toHaveBeenCalledWith({
+      include: { product: true },
+      orderBy: { startsAt: 'asc' },
+    });
+    expect(findUnique).not.toHaveBeenCalled();
+  });
 });

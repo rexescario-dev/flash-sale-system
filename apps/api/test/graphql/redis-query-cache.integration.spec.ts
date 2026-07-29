@@ -164,6 +164,12 @@ describe('Redis query-cache GraphQL integration', () => {
             counters.findById += 1;
             return inner.findById(id);
           },
+          async findAllForCatalog() {
+            return inner.findAllForCatalog();
+          },
+          async findByIdWithProduct(id: FlashSaleId) {
+            return inner.findByIdWithProduct(id);
+          },
         }),
         inject: [PrismaFlashSaleRepository],
       })
