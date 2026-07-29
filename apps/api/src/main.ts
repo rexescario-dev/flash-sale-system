@@ -9,6 +9,8 @@ import { AppModule } from './app.module';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const config = app.get(ConfigService<AppEnv, true>);
+  // SPA (Vite :5173) and API (:3000/:3001) are cross-origin in local/E2E stacks.
+  app.enableCors({ origin: true });
   if (config.get('TRUSTED_PROXY', { infer: true })) {
     app.set('trust proxy', 1);
   }
