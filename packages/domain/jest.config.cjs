@@ -1,24 +1,24 @@
+/* global module */
 /** @type {import('jest').Config} */
 module.exports = {
-  testEnvironment: 'node',
-  roots: ['<rootDir>/src'],
-  testRegex: '.*\\.spec\\.ts$',
   moduleFileExtensions: ['ts', 'js', 'json'],
+  moduleNameMapper: {
+    // Source imports use NodeNext-style `.js` suffixes; strip for ts-jest resolution.
+    '^(\\.{1,2}/.*)\\.js$': '$1',
+  },
+  roots: ['<rootDir>/src'],
+  testEnvironment: 'node',
+  testRegex: '.*\\.spec\\.ts$',
   transform: {
     '^.+\\.tsx?$': [
       'ts-jest',
       {
-        useESM: true,
         tsconfig: {
-          module: 'NodeNext',
-          moduleResolution: 'NodeNext',
+          module: 'CommonJS',
+          moduleResolution: 'Node',
           types: ['jest'],
         },
       },
     ],
-  },
-  extensionsToTreatAsEsm: ['.ts'],
-  moduleNameMapper: {
-    '^(\\.{1,2}/.*)\\.js$': '$1',
   },
 };

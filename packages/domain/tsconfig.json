@@ -6,8 +6,8 @@
     "declaration": true,
     "declarationMap": true,
     "noEmit": false,
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
     "types": ["jest"]
   },
   "include": ["src/**/*.ts"],

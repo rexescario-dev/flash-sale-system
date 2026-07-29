@@ -13,7 +13,8 @@
     "test:integration": "DATABASE_URL=${DATABASE_URL:-postgresql://flash_sale:flash_sale_dev@localhost:5432/flash_sale} REDIS_URL=${REDIS_URL:-redis://localhost:6379} jest --config jest.integration.config.cjs --runInBand",
     "prisma:generate": "DATABASE_URL=${DATABASE_URL:-postgresql://flash_sale:flash_sale_dev@localhost:5432/flash_sale} prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:migrate:deploy": "DATABASE_URL=${DATABASE_URL:-postgresql://flash_sale:flash_sale_dev@localhost:5432/flash_sale} prisma migrate deploy"
+    "prisma:migrate:deploy": "DATABASE_URL=${DATABASE_URL:-postgresql://flash_sale:flash_sale_dev@localhost:5432/flash_sale} prisma migrate deploy",
+    "e2e:seed": "tsx test/e2e/seed/cli.ts"
   },
   "dependencies": {
     "@apollo/server": "^5.5.1",
@@ -45,6 +46,7 @@
     "prisma": "^6.11.1",
     "ts-jest": "^29.4.0",
     "ts-node": "^10.9.2",
+    "tsx": "^4.23.1",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.34.1"
   }

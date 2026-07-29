@@ -28,5 +28,9 @@ pnpm-debug.log*
 
 # Generated
 apps/api/schema.gql
+e2e/seed-state.json
+e2e/test-results/
+e2e/playwright-report/
+e2e/.auth/
 
 .worktrees/
