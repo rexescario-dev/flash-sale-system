@@ -3,6 +3,7 @@ import {
   type FlashSale,
   type FlashSaleId,
   type FlashSaleRepository,
+  type Product,
 } from '@flash-sale/domain';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -15,26 +16,70 @@ import { CLOCK } from '../graphql/clock';
 import { REDIS_CACHE_DEGRADED, REDIS_CACHE_INVALIDATION_FAILED } from '../redis/redis-events';
 import { flashSaleCacheKey } from '../redis/redis-keys';
 import { REDIS_CLIENT } from '../redis/redis.tokens';
+import { FlashSaleStatusGql } from './graphql/flash-sale-status.enum';
 import { toFlashSaleStatusGql } from './graphql/flash-sale-status.mapper';
+
+export type FlashSaleCacheProductSnapshot = {
+  id: string;
+  description: null | string;
+  name: string;
+};
 
 export type FlashSaleCacheSnapshot = {
   id: string;
   endsAt: string;
+  product: FlashSaleCacheProductSnapshot;
   remainingStock: number;
   startsAt: string;
   status: 'ACTIVE' | 'ENDED' | 'SOLD_OUT' | 'UPCOMING';
   totalStock: number;
 };
 
-function toSnapshot(entity: FlashSale, nowUtc: Date): FlashSaleCacheSnapshot {
+const FLASH_SALE_CACHE_STATUSES = new Set<string>(Object.values(FlashSaleStatusGql));
+
+function isFlashSaleCacheStatus(value: unknown): value is FlashSaleCacheSnapshot['status'] {
+  return typeof value === 'string' && FLASH_SALE_CACHE_STATUSES.has(value);
+}
+
+function toProductSnapshot(product: Product): FlashSaleCacheProductSnapshot {
   return {
-    id: entity.getId(),
-    endsAt: entity.getEndsAt().toISOString(),
-    remainingStock: entity.getRemainingStock(),
-    startsAt: entity.getStartsAt().toISOString(),
-    status: toFlashSaleStatusGql(entity.getStatus(nowUtc)),
-    totalStock: entity.getTotalStock(),
+    id: product.getId(),
+    description: product.getDescription() ?? null,
+    name: product.getName(),
   };
+}
+
+function toSnapshot(flashSale: FlashSale, product: Product, nowUtc: Date): FlashSaleCacheSnapshot {
+  return {
+    id: flashSale.getId(),
+    endsAt: flashSale.getEndsAt().toISOString(),
+    product: toProductSnapshot(product),
+    remainingStock: flashSale.getRemainingStock(),
+    startsAt: flashSale.getStartsAt().toISOString(),
+    status: toFlashSaleStatusGql(flashSale.getStatus(nowUtc)),
+    totalStock: flashSale.getTotalStock(),
+  };
+}
+
+function isCompleteSnapshot(value: unknown): value is FlashSaleCacheSnapshot {
+  if (value === null || typeof value !== 'object') {
+    return false;
+  }
+  const snapshot = value as Partial<FlashSaleCacheSnapshot>;
+  const product = snapshot.product;
+  return (
+    typeof snapshot.id === 'string' &&
+    typeof snapshot.endsAt === 'string' &&
+    typeof snapshot.startsAt === 'string' &&
+    typeof snapshot.remainingStock === 'number' &&
+    typeof snapshot.totalStock === 'number' &&
+    isFlashSaleCacheStatus(snapshot.status) &&
+    product !== null &&
+    typeof product === 'object' &&
+    typeof product.id === 'string' &&
+    typeof product.name === 'string' &&
+    (product.description === null || typeof product.description === 'string')
+  );
 }
 
 @Injectable()
@@ -57,7 +102,16 @@ export class FlashSaleQueryCache {
       const raw = await this.redis.get(key);
       if (raw !== null) {
         try {
-          return JSON.parse(raw) as FlashSaleCacheSnapshot;
+          const parsed: unknown = JSON.parse(raw);
+          if (isCompleteSnapshot(parsed)) {
+            return parsed;
+          }
+          this.logger.warn({
+            event: REDIS_CACHE_DEGRADED,
+            key,
+            op: 'get',
+            reason: 'invalid_payload',
+          });
         } catch (err) {
           this.logger.warn({
             err: String(err),
@@ -78,12 +132,12 @@ export class FlashSaleQueryCache {
       });
     }
 
-    const entity = await this.flashSales.findById(id);
-    if (entity === null) {
+    const loaded = await this.flashSales.findByIdWithProduct(id);
+    if (loaded === null) {
       return null;
     }
 
-    const snapshot = toSnapshot(entity, this.clock.nowUtc());
+    const snapshot = toSnapshot(loaded.flashSale, loaded.product, this.clock.nowUtc());
     try {
       await this.redis.set(
         key,

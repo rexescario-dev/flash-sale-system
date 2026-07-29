@@ -2,6 +2,7 @@ import {
   FLASH_SALE_REPOSITORY,
   FlashSale,
   type FlashSaleId,
+  Product,
   type ProductId,
   PURCHASE_FLOW,
   PURCHASE_REPOSITORY,
@@ -37,6 +38,7 @@ type GraphqlRequestBody = {
 
 type FlashSaleFixture = {
   endsAt: Date;
+  productDescription?: null | string;
   remainingStock: number;
   startsAt: Date;
   suffix: string;
@@ -74,6 +76,9 @@ async function seedFlashSale(prisma: PrismaService, fixture: FlashSaleFixture): 
     data: {
       id: productId,
       name: 'GraphQL API Integration Product',
+      ...(fixture.productDescription !== undefined
+        ? { description: fixture.productDescription }
+        : {}),
       updatedAt: now,
     },
   });
@@ -154,7 +159,7 @@ describe('GraphQL API integration (#26) - persistence suite', () => {
     const schema = introspection.data!.__schema;
     const queryNames = schema.queryType.fields.map((field) => field.name);
     const mutationNames = schema.mutationType.fields.map((field) => field.name);
-    expect(new Set(queryNames)).toEqual(new Set(['flashSale', 'myPurchase']));
+    expect(new Set(queryNames)).toEqual(new Set(['flashSale', 'flashSales', 'myPurchase']));
     expect(new Set(mutationNames)).toEqual(new Set(['purchaseItem']));
     expect(schema.subscriptionType).toBeNull();
 
@@ -218,6 +223,11 @@ describe('GraphQL API integration (#26) - persistence suite', () => {
               totalStock
               startsAt
               endsAt
+              product {
+                id
+                name
+                description
+              }
             }
           }
         `,
@@ -228,6 +238,11 @@ describe('GraphQL API integration (#26) - persistence suite', () => {
       expect(result.data?.flashSale).toBeDefined();
       expect(result.data?.flashSale).toMatchObject({
         id: flashSaleId,
+        product: {
+          id: `product-graphql-api-${suffix}`,
+          description: null,
+          name: 'GraphQL API Integration Product',
+        },
         remainingStock: 4,
         totalStock: 10,
       });
@@ -235,6 +250,113 @@ describe('GraphQL API integration (#26) - persistence suite', () => {
       expect(result.data?.flashSale).not.toHaveProperty('nowUtc');
     } finally {
       await cleanupFlashSale(prisma, suffix);
+    }
+  });
+
+  it('returns flashSale nested product with null description', async () => {
+    const suffix = randomUUID();
+    try {
+      const flashSaleId = await seedFlashSale(prisma, {
+        endsAt: new Date(Date.now() + 20 * 60_000),
+        productDescription: null,
+        remainingStock: 2,
+        startsAt: new Date(Date.now() - 20 * 60_000),
+        suffix,
+        totalStock: 2,
+      });
+
+      const result = await postGraphql<{
+        flashSale: { product: { description: null | string } };
+      }>(app, {
+        query: `
+          query FlashSaleProduct($id: ID!) {
+            flashSale(id: $id) {
+              product { id name description }
+            }
+          }
+        `,
+        variables: { id: flashSaleId },
+      });
+
+      expect(result.errors).toBeUndefined();
+      expect(result.data?.flashSale.product.description).toBeNull();
+    } finally {
+      await cleanupFlashSale(prisma, suffix);
+    }
+  });
+
+  it('returns empty flashSales when no sales exist', async () => {
+    // This integration suite runs serially (--runInBand) against a dedicated test
+    // database (CI: ephemeral Postgres job service; locally the Compose/dev DB
+    // configured by DATABASE_URL). The empty-catalog test intentionally clears all
+    // dependent tables to verify the real global catalog returns [] when no sales
+    // exist. Do not run this suite concurrently with other tests sharing the same
+    // database.
+    await prisma.purchase.deleteMany({});
+    await prisma.flashSale.deleteMany({});
+    await prisma.product.deleteMany({});
+
+    const result = await postGraphql<{ flashSales: unknown[] }>(app, {
+      query: `query { flashSales { id } }`,
+    });
+
+    expect(result.errors).toBeUndefined();
+    expect(result.data?.flashSales).toEqual([]);
+  });
+
+  it('returns flashSales ordered by startsAt ASC with related products and ACTIVE status', async () => {
+    const suffix = randomUUID();
+    const lateSuffix = `late-${suffix}`;
+    const earlySuffix = `early-${suffix}`;
+    try {
+      const lateId = await seedFlashSale(prisma, {
+        endsAt: new Date(Date.now() + 60 * 60_000),
+        remainingStock: 3,
+        startsAt: new Date(Date.now() + 10 * 60_000),
+        suffix: lateSuffix,
+        totalStock: 3,
+      });
+      const earlyId = await seedFlashSale(prisma, {
+        endsAt: new Date(Date.now() + 30 * 60_000),
+        remainingStock: 5,
+        startsAt: new Date(Date.now() - 10 * 60_000),
+        suffix: earlySuffix,
+        totalStock: 5,
+      });
+
+      const result = await postGraphql<{
+        flashSales: Array<{
+          id: string;
+          product: { id: string; name: string };
+          status: string;
+        }>;
+      }>(app, {
+        query: `
+          query FlashSalesCatalog {
+            flashSales {
+              id
+              status
+              remainingStock
+              totalStock
+              startsAt
+              endsAt
+              product { id name description }
+            }
+          }
+        `,
+      });
+
+      expect(result.errors).toBeUndefined();
+      const ours = (result.data?.flashSales ?? []).filter((row) =>
+        [earlyId, lateId].includes(row.id),
+      );
+      expect(ours.map((row) => row.id)).toEqual([earlyId, lateId]);
+      expect(ours[0]!.product.id).toBe(`product-graphql-api-${earlySuffix}`);
+      expect(ours[1]!.product.id).toBe(`product-graphql-api-${lateSuffix}`);
+      expect(ours[0]!.status).toBe('ACTIVE');
+    } finally {
+      await cleanupFlashSale(prisma, earlySuffix);
+      await cleanupFlashSale(prisma, lateSuffix);
     }
   });
 
@@ -599,6 +721,19 @@ describe('GraphQL API integration (#26) - controlled-error suite', () => {
             throw new Error('secret prisma detail');
           }
           return existingSale;
+        },
+        findAllForCatalog: async () => [],
+        findByIdWithProduct: async (id: string) => {
+          if (String(id).includes('throw')) {
+            throw new Error('secret prisma detail');
+          }
+          return {
+            flashSale: existingSale,
+            product: Product.create({
+              id: 'product-controlled' as ProductId,
+              name: 'Controlled Product',
+            }),
+          };
         },
       })
       .overrideProvider(PURCHASE_REPOSITORY)
