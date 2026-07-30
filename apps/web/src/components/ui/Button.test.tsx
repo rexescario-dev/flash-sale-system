@@ -1,5 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { createRef } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { Button } from './Button';
@@ -28,6 +29,17 @@ describe('Button', () => {
     );
     expect(screen.getByRole('button', { name: /cancel/i }).className).toMatch(/text-emerald-800/);
     expect(screen.getByRole('button', { name: /cancel/i }).className).not.toMatch(/bg-emerald-700/);
+  });
+
+  it('forwards ref to the native button element', () => {
+    const ref = createRef<HTMLButtonElement>();
+    render(
+      <Button ref={ref} type="button">
+        Action
+      </Button>,
+    );
+    expect(ref.current).toBeInstanceOf(HTMLButtonElement);
+    expect(ref.current?.tagName).toBe('BUTTON');
   });
 
   it('honors disabled and merges className', () => {
