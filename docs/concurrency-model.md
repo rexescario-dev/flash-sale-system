@@ -26,7 +26,7 @@ flowchart TD
   beginTxn --> reserve --> createPurchase --> finish
 ```
 
-The diagram covers only the database transaction boundary. The full Web → GraphQL → Nest → Redis request lifecycle is documented in Purchase sequence (#62).
+The diagram covers only the database transaction boundary. The full Web → GraphQL → Nest → Redis request lifecycle is documented in [Purchase sequence](purchase-sequence.md).
 
 ## Concurrency guarantees
 
@@ -52,7 +52,7 @@ A database unique invariant on `(flash_sale_id, user_id)` — modeled in Prisma 
 
 This document does not cover:
 
-- End-to-end purchase request lifecycle (Purchase sequence, #62)
+- End-to-end purchase request lifecycle ([Purchase sequence](purchase-sequence.md))
 - Redis keys, TTLs, rate limits, or cache invalidation ([Redis caching & rate-limit strategy](redis-caching-strategy.md))
 - Future concurrency mechanisms (distributed locks, queues, optimistic version columns) until implemented
 - README expansion or documentation hub work (#73)
@@ -61,4 +61,4 @@ This document does not cover:
 
 - [System architecture](architecture.md)
 - [Redis caching & rate-limit strategy](redis-caching-strategy.md)
-- Purchase sequence (#62) — planned
+- [Purchase sequence](purchase-sequence.md)
