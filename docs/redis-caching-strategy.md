@@ -17,6 +17,8 @@ Design contract: [EPIC-04 scalability & Redis design](superpowers/specs/2026-07-
 
 **Not owned by Redis:** stock counters, admission control, sale existence for `myPurchase`, anything inside `PurchaseFlow` / Prisma adapters / `@flash-sale/domain`.
 
+**`myPurchases` (#125):** served directly from Postgres (uncached). History list caching and post-SUCCESS invalidation for that list are deferred to #129.
+
 Query caches are API read concerns used only by their resolvers. Rate limiting runs **before** `PURCHASE_FLOW.execute` and before any purchase transaction.
 
 ## Cache keys, TTLs, and staleness
