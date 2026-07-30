@@ -54,6 +54,7 @@ Additional read operations (`myPurchase`, `myPurchases`) follow the same archite
 - [Concurrency model](concurrency-model.md)
 - [Local development](local-development.md)
 - [Redis caching & rate-limit strategy](redis-caching-strategy.md)
+- [Testing strategy](testing-strategy.md)
 
 **Planned architecture documentation:**
 
