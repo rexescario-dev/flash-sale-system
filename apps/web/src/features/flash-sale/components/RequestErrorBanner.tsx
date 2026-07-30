@@ -6,13 +6,19 @@ type Props = {
 
 export function RequestErrorBanner({ message, onRetry, title = 'Something went wrong' }: Props) {
   return (
-    <div data-testid="request-error" role="alert">
-      <p>
-        <strong>{title}</strong>
-      </p>
-      <p>{message}</p>
+    <div
+      className="rounded-md border border-red-200 bg-red-50 p-4"
+      data-testid="request-error"
+      role="alert"
+    >
+      <p className="font-semibold text-red-900">{title}</p>
+      <p className="mt-1 text-sm text-red-800">{message}</p>
       {onRetry ? (
-        <button onClick={onRetry} type="button">
+        <button
+          className="mt-3 rounded bg-emerald-700 px-3 py-1.5 text-sm font-semibold text-white"
+          onClick={onRetry}
+          type="button"
+        >
           Try again
         </button>
       ) : null}

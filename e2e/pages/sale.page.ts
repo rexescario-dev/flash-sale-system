@@ -1,42 +1,62 @@
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
 export class SalePage {
   constructor(private readonly page: Page) {}
 
   alreadyPurchased() {
-    return this.page.getByTestId('already-purchased');
+    return this.visiblePurchaseSurface().getByTestId('already-purchased');
   }
 
   async buy(): Promise<void> {
     await this.buyButton().click();
   }
 
+  /**
+   * PurchaseRail and StickyBuyBar are both mounted (dual mount is intentional;
+   * visibility is CSS-only). Prefer the desktop rail when both report as
+   * visible; otherwise the sticky bar. Always return a single locator.
+   */
   buyButton() {
-    return this.page.getByRole('button', { name: /Buy Now|Buying/ });
+    return this.visiblePurchaseSurface().getByRole('button', { name: /Buy Now|Buying/ });
   }
 
   /** Commit opaque userId via IdentityStrip (Identify/Change → Save). */
   async enterUserId(userId: string): Promise<void> {
-    const identify = this.page.getByTestId('identity-identify');
+    const surface = this.visiblePurchaseSurface();
+    await surface.waitFor({ state: 'visible' });
+
+    const identify = surface.getByTestId('identity-identify');
+    const change = surface.getByTestId('identity-change');
+    // Wait for a settled strip action (guest Identify or identified Change) — avoid
+    // racing before either button is mounted.
+    await identify.or(change).waitFor({ state: 'visible' });
     if (await identify.isVisible()) {
       await identify.click();
     } else {
-      await this.page.getByTestId('identity-change').click();
+      await change.click();
     }
-    await this.userIdInput().fill(userId);
-    await this.page.getByTestId('identity-save').click();
+
+    const input = surface.getByTestId('identity-email-input');
+    await input.waitFor({ state: 'visible' });
+    await input.fill(userId);
+    await surface.getByTestId('identity-save').click();
+    await surface.getByTestId('identity-status').waitFor({ state: 'visible' });
   }
 
   async gotoSale(flashSaleId: string): Promise<void> {
     await this.page.goto(`/sales/${flashSaleId}`);
   }
 
+  purchaseId() {
+    return this.visiblePurchaseSurface().getByTestId('purchase-id');
+  }
+
   purchaseOutcome() {
-    return this.page.getByTestId('purchase-outcome');
+    return this.visiblePurchaseSurface().getByTestId('purchase-outcome');
   }
 
   purchaseOutcomeStatus() {
-    return this.page.getByTestId('purchase-outcome-status');
+    return this.visiblePurchaseSurface().getByTestId('purchase-outcome-status');
   }
 
   status() {
@@ -48,6 +68,15 @@ export class SalePage {
   }
 
   userIdInput() {
-    return this.page.getByTestId('identity-email-input');
+    return this.visiblePurchaseSurface().getByTestId('identity-email-input');
+  }
+
+  private visiblePurchaseSurface(): Locator {
+    // Prefer desktop rail when both are visible; otherwise sticky (mobile).
+    return this.page
+      .getByTestId('purchase-rail')
+      .or(this.page.getByTestId('sticky-buy-bar'))
+      .filter({ visible: true })
+      .first();
   }
 }

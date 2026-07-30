@@ -45,7 +45,7 @@ describe('AppRoutes', () => {
   it('renders flash sale page shell at /sales/:flashSaleId', async () => {
     renderAt('/sales/sale-123');
     expect(await screen.findByTestId('flash-sale-page')).toBeInTheDocument();
-    expect(screen.getByText(/sale-123/)).toBeInTheDocument();
+    expect(screen.getByTestId('back-to-products')).toBeInTheDocument();
   });
 
   it('renders not found for unknown routes', () => {

@@ -17,8 +17,9 @@ test('rejects duplicate purchase for same user', async ({ page }) => {
   });
 
   // EPIC-05 disables Buy once myPurchase reports purchased=true — prove that
-  // duplicate-specific UX (not merely any outcome banner).
-  await expect(sale.alreadyPurchased()).toHaveText('You have already purchased this item.', {
+  // duplicate-specific UX (not merely any outcome banner). Heading "Purchased"
+  // plus body copy (completion tone from #124).
+  await expect(sale.alreadyPurchased()).toContainText('You have already purchased this item.', {
     timeout: 15_000,
   });
   await expect(sale.buyButton()).toBeDisabled();
@@ -26,7 +27,7 @@ test('rejects duplicate purchase for same user', async ({ page }) => {
   // Reload proves the server-side purchase gate still surfaces duplicate UX.
   await sale.gotoSale(sales.activeStock10Id);
   await sale.enterUserId(userId);
-  await expect(sale.alreadyPurchased()).toHaveText('You have already purchased this item.', {
+  await expect(sale.alreadyPurchased()).toContainText('You have already purchased this item.', {
     timeout: 15_000,
   });
   await expect(sale.buyButton()).toBeDisabled();

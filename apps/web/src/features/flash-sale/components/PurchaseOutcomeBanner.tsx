@@ -14,13 +14,19 @@ type Props = {
 
 export function PurchaseOutcomeBanner({ result }: Props) {
   return (
-    <div data-testid="purchase-outcome" role="status">
-      <p>
-        <strong data-testid="purchase-outcome-status">{OUTCOME_HEADING[result.status]}</strong>
+    <div
+      className="rounded-md border border-emerald-900/15 bg-white/70 p-4"
+      data-testid="purchase-outcome"
+      role="status"
+    >
+      <p className="font-semibold text-emerald-950" data-testid="purchase-outcome-status">
+        {OUTCOME_HEADING[result.status]}
       </p>
-      <p>{result.message}</p>
+      <p className="mt-1 text-sm text-emerald-900/80">{result.message}</p>
       {result.status === 'SUCCESS' && result.purchaseId ? (
-        <p data-testid="purchase-id">Purchase ID: {result.purchaseId}</p>
+        <p className="mt-2 text-xs text-emerald-900/60" data-testid="purchase-id">
+          Purchase ID: {result.purchaseId}
+        </p>
       ) : null}
     </div>
   );
