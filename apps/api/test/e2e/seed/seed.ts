@@ -10,9 +10,19 @@ import { defaultSeedStatePath } from './paths';
 import { getE2EScenarios } from './scenarios';
 
 export type SeedState = {
+  products: {
+    activeStock10Name: string;
+    activeStock1Name: string;
+    endedName: string;
+    soldOutName: string;
+    upcomingName: string;
+  };
   sales: {
     activeStock10Id: string;
     activeStock1Id: string;
+    endedId: string;
+    soldOutId: string;
+    upcomingId: string;
   };
 };
 
@@ -74,6 +84,7 @@ export async function seedE2E(options?: {
         id: entry.saleId,
         productId: entry.productId,
         endsAt: entry.scenario.endsAt,
+        productName: entry.productName,
         remainingStock: entry.scenario.remainingStock,
         startsAt: entry.scenario.startsAt,
         totalStock: entry.scenario.totalStock,
@@ -84,9 +95,19 @@ export async function seedE2E(options?: {
     await clearE2ERedisKeys(redisUrl, planted);
 
     const state: SeedState = {
+      products: {
+        activeStock10Name: scenarios.activeStock10.productName,
+        activeStock1Name: scenarios.activeStock1.productName,
+        endedName: scenarios.ended.productName,
+        soldOutName: scenarios.soldOut.productName,
+        upcomingName: scenarios.upcoming.productName,
+      },
       sales: {
         activeStock10Id: scenarios.activeStock10.saleId,
         activeStock1Id: scenarios.activeStock1.saleId,
+        endedId: scenarios.ended.saleId,
+        soldOutId: scenarios.soldOut.saleId,
+        upcomingId: scenarios.upcoming.saleId,
       },
     };
 

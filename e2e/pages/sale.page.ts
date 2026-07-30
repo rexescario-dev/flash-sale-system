@@ -1,4 +1,4 @@
-import type { Locator, Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 export class SalePage {
   constructor(private readonly page: Page) {}
@@ -41,6 +41,24 @@ export class SalePage {
     await input.fill(userId);
     await surface.getByTestId('identity-save').click();
     await surface.getByTestId('identity-status').waitFor({ state: 'visible' });
+  }
+
+  async expectBuyDisabled(): Promise<void> {
+    await expect(this.buyButton()).toBeDisabled();
+  }
+
+  async expectDetailStatus(status: string): Promise<void> {
+    await expect(this.status()).toHaveText(status);
+  }
+
+  async expectNotAlreadyPurchased(): Promise<void> {
+    await expect(this.alreadyPurchased()).toHaveCount(0);
+  }
+
+  async expectPurchaseSuccess(): Promise<void> {
+    await expect(this.purchaseOutcomeStatus()).toHaveText('Purchase successful', {
+      timeout: 15_000,
+    });
   }
 
   async gotoSale(flashSaleId: string): Promise<void> {

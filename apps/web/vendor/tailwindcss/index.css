@@ -217,6 +217,35 @@
 .hidden {
   display: none;
 }
+
+/*
+ * #127 nav responsive utilities must come AFTER `.hidden` so `hidden md:flex`
+ * resolves like real Tailwind (md:flex wins at ≥768px).
+ */
+@media (min-width: 768px) {
+  .md\:flex {
+    display: flex;
+  }
+  .md\:hidden {
+    display: none;
+  }
+  .md\:w-auto {
+    width: auto;
+  }
+  .md\:flex-1 {
+    flex: 1 1 0%;
+  }
+  .md\:flex-row {
+    flex-direction: row;
+  }
+  .md\:items-center {
+    align-items: center;
+  }
+  .md\:gap-4 {
+    gap: 1rem;
+  }
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
