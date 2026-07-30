@@ -106,6 +106,7 @@ describe('CatalogPage', () => {
     expect(cards).toHaveLength(2);
     expect(screen.getByRole('link', { name: /alpha/i })).toHaveAttribute('href', '/sales/sale-a');
     expect(screen.getByRole('link', { name: /beta/i })).toHaveAttribute('href', '/sales/sale-b');
+    expect(screen.getAllByText('2 / 5 remaining')).toHaveLength(2);
   });
 
   it('shows empty state when flashSales is []', async () => {
