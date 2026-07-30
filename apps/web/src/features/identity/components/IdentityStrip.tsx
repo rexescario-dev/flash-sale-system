@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { isNonWhitespaceId } from '../../../graphql/id';
+import { formatIdentityStatus } from '../format-identity-status';
 import { useUserIdentity } from '../IdentityProvider';
 
 export function IdentityStrip() {
@@ -102,7 +103,7 @@ export function IdentityStrip() {
   return (
     <div className="mb-6 flex flex-wrap items-center gap-3" data-testid="identity-strip">
       <p className="text-sm text-emerald-900" data-testid="identity-status">
-        {userId === null ? 'Shopping as Guest' : `Shopping as ${userId}`}
+        {formatIdentityStatus(userId)}
       </p>
       {userId === null ? (
         <button
