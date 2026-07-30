@@ -159,7 +159,9 @@ describe('GraphQL API integration (#26) - persistence suite', () => {
     const schema = introspection.data!.__schema;
     const queryNames = schema.queryType.fields.map((field) => field.name);
     const mutationNames = schema.mutationType.fields.map((field) => field.name);
-    expect(new Set(queryNames)).toEqual(new Set(['flashSale', 'flashSales', 'myPurchase']));
+    expect(new Set(queryNames)).toEqual(
+      new Set(['flashSale', 'flashSales', 'myPurchase', 'myPurchases']),
+    );
     expect(new Set(mutationNames)).toEqual(new Set(['purchaseItem']));
     expect(schema.subscriptionType).toBeNull();
 
@@ -177,6 +179,10 @@ describe('GraphQL API integration (#26) - persistence suite', () => {
     expect(typeFields.get('MyPurchaseResult')).toEqual(
       new Set(['purchased', 'purchaseId', 'purchasedAt']),
     );
+    expect(typeFields.get('PurchaseHistoryItem')).toEqual(
+      new Set(['id', 'purchasedAt', 'flashSale', 'product']),
+    );
+    expect(typeFields.get('FlashSaleRef')).toEqual(new Set(['id']));
     expect(typeFields.get('PurchaseItemResult')).toEqual(
       new Set(['status', 'message', 'purchaseId']),
     );
@@ -694,6 +700,168 @@ describe('GraphQL API integration (#26) - persistence suite', () => {
       expect(badInput.errors?.[0]?.extensions?.code).toBe('BAD_USER_INPUT');
     } finally {
       await cleanupFlashSale(prisma, badInputSuffix);
+    }
+  });
+
+  it('returns myPurchases empty, nested items, newest-first across sales, isolation, and BAD_USER_INPUT', async () => {
+    type HistoryItem = {
+      id: string;
+      flashSale: { id: string };
+      product: { id: string; description: null | string; name: string };
+      purchasedAt: string;
+    };
+
+    const myPurchasesQuery = `
+      query MyPurchases($userId: ID!) {
+        myPurchases(userId: $userId) {
+          id
+          purchasedAt
+          flashSale { id }
+          product { id name description }
+        }
+      }
+    `;
+
+    const empty = await postGraphql<{ myPurchases: HistoryItem[] }>(app, {
+      query: myPurchasesQuery,
+      variables: { userId: `user-history-unknown-${randomUUID()}` },
+    });
+    expect(empty.errors).toBeUndefined();
+    expect(empty.data?.myPurchases).toEqual([]);
+
+    const badInput = await postGraphql(app, {
+      query: myPurchasesQuery,
+      variables: { userId: '   ' },
+    });
+    expect(badInput.data).toBeNull();
+    expect(badInput.errors?.[0]?.extensions?.code).toBe('BAD_USER_INPUT');
+
+    const suffixA = randomUUID();
+    const suffixB = `${suffixA}-b`;
+    const userA = `user-history-a-${suffixA}`;
+    const userB = `user-history-b-${suffixA}`;
+
+    try {
+      const saleAId = await seedFlashSale(prisma, {
+        endsAt: new Date(Date.now() + 20 * 60_000),
+        remainingStock: 3,
+        startsAt: new Date(Date.now() - 20 * 60_000),
+        suffix: suffixA,
+        totalStock: 3,
+      });
+      const saleBId = await seedFlashSale(prisma, {
+        endsAt: new Date(Date.now() + 20 * 60_000),
+        remainingStock: 3,
+        startsAt: new Date(Date.now() - 20 * 60_000),
+        suffix: suffixB,
+        totalStock: 3,
+      });
+
+      const olderPurchasedAt = new Date('2026-07-28T10:00:00.000Z');
+      const newerPurchasedAt = new Date('2026-07-28T14:00:00.000Z');
+      const olderPurchaseId = `purchase-history-older-${suffixA}`;
+      const newerPurchaseId = `purchase-history-newer-${suffixA}`;
+      const userBPurchaseId = `purchase-history-user-b-${suffixA}`;
+
+      // Insert older purchasedAt before newer so insertion order ≠ purchase-time order.
+      await prisma.purchase.create({
+        data: {
+          flashSaleId: saleAId,
+          id: olderPurchaseId,
+          userId: userA,
+          purchasedAt: olderPurchasedAt,
+        },
+      });
+
+      const one = await postGraphql<{ myPurchases: HistoryItem[] }>(app, {
+        query: myPurchasesQuery,
+        variables: { userId: userA },
+      });
+      expect(one.errors).toBeUndefined();
+      expect(one.data?.myPurchases).toEqual([
+        {
+          id: olderPurchaseId,
+          flashSale: { id: saleAId },
+          product: {
+            id: `product-graphql-api-${suffixA}`,
+            description: null,
+            name: 'GraphQL API Integration Product',
+          },
+          purchasedAt: olderPurchasedAt.toISOString(),
+        },
+      ]);
+
+      await prisma.purchase.create({
+        data: {
+          flashSaleId: saleBId,
+          id: newerPurchaseId,
+          userId: userA,
+          purchasedAt: newerPurchasedAt,
+        },
+      });
+      await prisma.purchase.create({
+        data: {
+          flashSaleId: saleAId,
+          id: userBPurchaseId,
+          userId: userB,
+          purchasedAt: new Date('2026-07-28T16:00:00.000Z'),
+        },
+      });
+
+      const multiple = await postGraphql<{ myPurchases: HistoryItem[] }>(app, {
+        query: myPurchasesQuery,
+        variables: { userId: userA },
+      });
+      expect(multiple.errors).toBeUndefined();
+      expect(multiple.data?.myPurchases.map((item) => item.id)).toEqual([
+        newerPurchaseId,
+        olderPurchaseId,
+      ]);
+      expect(multiple.data?.myPurchases).toEqual([
+        {
+          id: newerPurchaseId,
+          flashSale: { id: saleBId },
+          product: {
+            id: `product-graphql-api-${suffixB}`,
+            description: null,
+            name: 'GraphQL API Integration Product',
+          },
+          purchasedAt: newerPurchasedAt.toISOString(),
+        },
+        {
+          id: olderPurchaseId,
+          flashSale: { id: saleAId },
+          product: {
+            id: `product-graphql-api-${suffixA}`,
+            description: null,
+            name: 'GraphQL API Integration Product',
+          },
+          purchasedAt: olderPurchasedAt.toISOString(),
+        },
+      ]);
+
+      const isolated = await postGraphql<{ myPurchases: HistoryItem[] }>(app, {
+        query: myPurchasesQuery,
+        variables: { userId: userB },
+      });
+      expect(isolated.errors).toBeUndefined();
+      expect(isolated.data?.myPurchases).toEqual([
+        {
+          id: userBPurchaseId,
+          flashSale: { id: saleAId },
+          product: {
+            id: `product-graphql-api-${suffixA}`,
+            description: null,
+            name: 'GraphQL API Integration Product',
+          },
+          purchasedAt: new Date('2026-07-28T16:00:00.000Z').toISOString(),
+        },
+      ]);
+      expect(isolated.data?.myPurchases.map((item) => item.id)).not.toContain(olderPurchaseId);
+      expect(isolated.data?.myPurchases.map((item) => item.id)).not.toContain(newerPurchaseId);
+    } finally {
+      await cleanupFlashSale(prisma, suffixA);
+      await cleanupFlashSale(prisma, suffixB);
     }
   });
 });
