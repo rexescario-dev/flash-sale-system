@@ -49,6 +49,11 @@ describe('FlashSaleCard', () => {
     expect(screen.queryByTestId('catalog-card-description')).not.toBeInTheDocument();
   });
 
+  it('omits description when whitespace-only', () => {
+    renderCard(sale({ product: { id: 'p1', description: '   ', name: 'X' } }));
+    expect(screen.queryByTestId('catalog-card-description')).not.toBeInTheDocument();
+  });
+
   it('renders non-empty description', () => {
     renderCard(sale({ product: { id: 'p1', description: 'Shown', name: 'X' } }));
     expect(screen.getByTestId('catalog-card-description')).toHaveTextContent('Shown');
