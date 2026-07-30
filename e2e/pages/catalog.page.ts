@@ -21,6 +21,7 @@ export class CatalogPage {
   }
 
   async openSaleByProductName(productName: string): Promise<void> {
-    await this.page.getByRole('link', { name: new RegExp(productName) }).click();
+    // Substring match: card link accessible name includes status/stock text too.
+    await this.page.getByRole('link', { name: productName }).click();
   }
 }

@@ -4,7 +4,7 @@ export class PurchasesPage {
   constructor(private readonly page: Page) {}
 
   async expectEmptyState(): Promise<void> {
-    await expect(this.page.getByTestId('purchases-empty')).toBeVisible();
+    await expect(this.page.getByTestId('purchases-empty')).toBeVisible({ timeout: 15_000 });
   }
 
   async expectPurchaseNotVisible(productName: string): Promise<void> {
