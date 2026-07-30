@@ -4,6 +4,7 @@ import { http, HttpResponse } from 'msw';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 
+import { IdentityProvider } from '../features/identity/IdentityProvider';
 import { graphqlUrl, readGraphqlBody } from '../test/msw/graphql';
 import { server } from '../test/msw/server';
 import { createTestQueryClient } from '../test/query-client';
@@ -12,9 +13,11 @@ import { AppRoutes } from './router';
 function renderAt(path: string) {
   return render(
     <QueryClientProvider client={createTestQueryClient()}>
-      <MemoryRouter initialEntries={[path]}>
-        <AppRoutes />
-      </MemoryRouter>
+      <IdentityProvider>
+        <MemoryRouter initialEntries={[path]}>
+          <AppRoutes />
+        </MemoryRouter>
+      </IdentityProvider>
     </QueryClientProvider>,
   );
 }

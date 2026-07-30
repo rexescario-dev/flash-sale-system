@@ -1,13 +1,15 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 
 import type { FlashSale, MyPurchaseResult, PurchaseItemResult } from '../graphql/types';
 
 import { AppRoutes } from '../app/router';
+import { identityStorage } from '../features/identity/identity-storage';
+import { IdentityProvider } from '../features/identity/IdentityProvider';
 import { graphqlUrl, readGraphqlBody } from '../test/msw/graphql';
 import { server } from '../test/msw/server';
 import { createTestQueryClient } from '../test/query-client';
@@ -35,19 +37,38 @@ function activeSale(id: string, overrides: Partial<FlashSale> = {}): FlashSale {
   };
 }
 
-function renderSale(path: string) {
+function renderSale(path: string, options: { userId?: string } = {}) {
+  localStorage.clear();
+  if (options.userId !== undefined) {
+    identityStorage.set(options.userId);
+  }
   const queryClient = createTestQueryClient();
-  const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+  const user = userEvent.setup();
   render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={[path]}>
-        <Routes>
-          <Route element={<FlashSalePage />} path="/sales/:flashSaleId" />
-        </Routes>
-      </MemoryRouter>
+      <IdentityProvider>
+        <MemoryRouter initialEntries={[path]}>
+          <Routes>
+            <Route element={<FlashSalePage />} path="/sales/:flashSaleId" />
+          </Routes>
+        </MemoryRouter>
+      </IdentityProvider>
     </QueryClientProvider>,
   );
   return { queryClient, user };
+}
+
+async function identifyViaStrip(user: ReturnType<typeof userEvent.setup>, raw: string) {
+  const identify = screen.queryByTestId('identity-identify');
+  if (identify) {
+    await user.click(identify);
+  } else {
+    await user.click(screen.getByTestId('identity-change'));
+  }
+  const input = screen.getByTestId('identity-email-input');
+  await user.clear(input);
+  await user.type(input, raw);
+  await user.click(screen.getByTestId('identity-save'));
 }
 
 function installHandlers(options: {
@@ -133,7 +154,7 @@ function installHandlers(options: {
         errors: [
           {
             extensions: { code: 'UNHANDLED_TEST_OPERATION' },
-            message: `Unhandled GraphQL operation in test: ${body.operationName ?? 'unknown'}`,
+            message: `Unhandled GraphQL operation ${body.operationName}`,
           },
         ],
       });
@@ -144,13 +165,9 @@ function installHandlers(options: {
 }
 
 describe('FlashSalePage', () => {
-  beforeEach(() => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-  });
-
   afterEach(() => {
     cleanup();
-    vi.useRealTimers();
+    localStorage.clear();
   });
 
   it('renders backend status even when timestamps look outside the window', async () => {
@@ -192,7 +209,6 @@ describe('FlashSalePage', () => {
   });
 
   it('shows safe request error for unhandled GraphQL operations', async () => {
-    // Default MSW handler only — no FlashSale override
     renderSale('/sales/sale-unhandled');
     const alert = await screen.findByTestId('request-error');
     expect(alert).toHaveTextContent(/couldn't complete your request/i);
@@ -200,18 +216,26 @@ describe('FlashSalePage', () => {
     expect(alert).not.toHaveTextContent('Unhandled GraphQL operation');
   });
 
-  it('does not call myPurchase for whitespace-only userId', async () => {
+  it('does not call myPurchase for Guest and shows identify hint', async () => {
     const counters = installHandlers({});
-    const { user } = renderSale('/sales/sale-123');
+    renderSale('/sales/sale-123');
     await screen.findByTestId('sale-status');
-    await user.type(screen.getByLabelText(/user id/i), '   ');
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(400);
-    });
+    expect(screen.getByTestId('identify-to-buy')).toBeInTheDocument();
+    expect(screen.queryByLabelText(/user id/i)).not.toBeInTheDocument();
     expect(counters.myPurchase.size).toBe(0);
   });
 
-  it('debounces myPurchase with exact raw userId and preserves Buy on request error', async () => {
+  it('does not call myPurchase for whitespace-only draft (Save disabled)', async () => {
+    const counters = installHandlers({});
+    const { user } = renderSale('/sales/sale-123');
+    await screen.findByTestId('sale-status');
+    await user.click(screen.getByTestId('identity-identify'));
+    await user.type(screen.getByTestId('identity-email-input'), '   ');
+    expect(screen.getByTestId('identity-save')).toBeDisabled();
+    expect(counters.myPurchase.size).toBe(0);
+  });
+
+  it('calls myPurchase with exact raw userId and preserves Buy on request error', async () => {
     let lastUserId: string | undefined;
     server.use(
       http.post(graphqlUrl(), async ({ request }) => {
@@ -240,10 +264,7 @@ describe('FlashSalePage', () => {
 
     const { user } = renderSale('/sales/sale-123');
     await screen.findByTestId('sale-status');
-    await user.type(screen.getByLabelText(/user id/i), ' user-123 ');
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(400);
-    });
+    await identifyViaStrip(user, ' user-123 ');
     await screen.findByTestId('request-error');
     expect(lastUserId).toBe(' user-123 ');
     expect(screen.getByTestId('request-error')).not.toHaveTextContent('shard-9');
@@ -254,12 +275,7 @@ describe('FlashSalePage', () => {
     installHandlers({
       myPurchase: { purchaseId: 'p-9', purchased: true, purchasedAt: '2026-01-01T00:00:00.000Z' },
     });
-    const { user } = renderSale('/sales/sale-123');
-    await screen.findByTestId('sale-status');
-    await user.type(screen.getByLabelText(/user id/i), 'user-1');
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(400);
-    });
+    renderSale('/sales/sale-123', { userId: 'user-1' });
     expect(await screen.findByTestId('already-purchased')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /buy now/i })).toBeDisabled();
   });
@@ -274,10 +290,7 @@ describe('FlashSalePage', () => {
     });
     const { user } = renderSale('/sales/Sale_ABC-123.~test');
     await screen.findByTestId('sale-status');
-    await user.type(screen.getByLabelText(/user id/i), ' user-123 ');
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(400);
-    });
+    await identifyViaStrip(user, ' user-123 ');
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /buy now/i })).toBeEnabled();
     });
@@ -315,12 +328,8 @@ describe('FlashSalePage', () => {
       }),
     );
 
-    const { user } = renderSale('/sales/sale-123');
+    const { user } = renderSale('/sales/sale-123', { userId: 'user-1' });
     await screen.findByTestId('sale-status');
-    await user.type(screen.getByLabelText(/user id/i), 'user-1');
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(400);
-    });
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /buy now/i })).toBeEnabled();
     });
@@ -353,12 +362,8 @@ describe('FlashSalePage', () => {
         status: 'SUCCESS',
       },
     });
-    const { user } = renderSale('/sales/sale-123');
+    const { user } = renderSale('/sales/sale-123', { userId: 'user-456' });
     await screen.findByTestId('sale-status');
-    await user.type(screen.getByLabelText(/user id/i), 'user-456');
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(400);
-    });
     await waitFor(() => {
       expect(counters.myPurchase.get(keyOf('sale-123', 'user-456'))).toBe(1);
     });
@@ -376,12 +381,8 @@ describe('FlashSalePage', () => {
       flashSale: activeSale('sale-123', { remainingStock: 1, status: 'ACTIVE' }),
       purchaseItem: { purchaseId: null, message: 'Sold out', status: 'SOLD_OUT' },
     });
-    const { user } = renderSale('/sales/sale-123');
+    const { user } = renderSale('/sales/sale-123', { userId: 'user-1' });
     await screen.findByTestId('sale-status');
-    await user.type(screen.getByLabelText(/user id/i), 'user-1');
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(400);
-    });
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /buy now/i })).toBeEnabled();
     });
@@ -399,12 +400,8 @@ describe('FlashSalePage', () => {
         status: 'SUCCESS',
       },
     });
-    const { user } = renderSale('/sales/sale-123');
+    const { user } = renderSale('/sales/sale-123', { userId: 'user-1' });
     await screen.findByTestId('sale-status');
-    await user.type(screen.getByLabelText(/user id/i), 'user-1');
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(400);
-    });
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /buy now/i })).toBeEnabled();
     });
@@ -431,19 +428,62 @@ describe('FlashSalePage', () => {
 
     for (const outcome of outcomes) {
       installHandlers({ purchaseItem: outcome });
-      const { user } = renderSale('/sales/sale-123');
+      const { user } = renderSale('/sales/sale-123', { userId: `user-${outcome.status}` });
       await screen.findByTestId('sale-status');
-      await user.type(screen.getByLabelText(/user id/i), `user-${outcome.status}`);
-      await act(async () => {
-        await vi.advanceTimersByTimeAsync(400);
-      });
       await waitFor(() => {
         expect(screen.getByRole('button', { name: /buy now/i })).toBeEnabled();
       });
       await user.click(screen.getByRole('button', { name: /buy now/i }));
       expect(await screen.findByTestId('purchase-outcome-status')).toBeInTheDocument();
       cleanup();
+      localStorage.clear();
     }
+  });
+
+  it('after switching identity, previous myPurchase cache no longer drives PurchasePanel', async () => {
+    installHandlers({
+      myPurchase: (vars) => {
+        const userId = String(vars.userId);
+        if (userId === 'user-a') {
+          return { purchaseId: 'p-a', purchased: true, purchasedAt: '2026-01-01T00:00:00.000Z' };
+        }
+        return { purchaseId: null, purchased: false, purchasedAt: null };
+      },
+    });
+    const { user } = renderSale('/sales/sale-123', { userId: 'user-a' });
+    expect(await screen.findByTestId('already-purchased')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /buy now/i })).toBeDisabled();
+
+    await identifyViaStrip(user, 'user-b');
+    await waitFor(() => {
+      expect(screen.queryByTestId('already-purchased')).not.toBeInTheDocument();
+    });
+    expect(screen.getByTestId('identity-status')).toHaveTextContent('Shopping as user-b');
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /buy now/i })).toBeEnabled();
+    });
+  });
+
+  it('hides prior identity purchase outcome after switching identity', async () => {
+    installHandlers({
+      purchaseItem: {
+        purchaseId: 'p-1',
+        message: 'Purchase completed',
+        status: 'SUCCESS',
+      },
+    });
+    const { user } = renderSale('/sales/sale-123', { userId: 'user-a' });
+    await screen.findByTestId('sale-status');
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /buy now/i })).toBeEnabled();
+    });
+    await user.click(screen.getByRole('button', { name: /buy now/i }));
+    expect(await screen.findByTestId('purchase-outcome')).toBeInTheDocument();
+
+    await identifyViaStrip(user, 'user-b');
+    await waitFor(() => {
+      expect(screen.queryByTestId('purchase-outcome')).not.toBeInTheDocument();
+    });
   });
 });
 
@@ -465,9 +505,11 @@ describe('AppRoutes unmatched GraphQL stays loud', () => {
 
     render(
       <QueryClientProvider client={createTestQueryClient()}>
-        <MemoryRouter initialEntries={['/']}>
-          <AppRoutes />
-        </MemoryRouter>
+        <IdentityProvider>
+          <MemoryRouter initialEntries={['/']}>
+            <AppRoutes />
+          </MemoryRouter>
+        </IdentityProvider>
       </QueryClientProvider>,
     );
 

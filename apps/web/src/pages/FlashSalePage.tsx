@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 
 import { isBuyDisabled } from '../features/flash-sale/buy-eligibility';
@@ -6,29 +5,30 @@ import { PurchaseOutcomeBanner } from '../features/flash-sale/components/Purchas
 import { PurchasePanel } from '../features/flash-sale/components/PurchasePanel';
 import { RequestErrorBanner } from '../features/flash-sale/components/RequestErrorBanner';
 import { SaleStatusCard } from '../features/flash-sale/components/SaleStatusCard';
+import { IdentityStrip } from '../features/identity/components/IdentityStrip';
+import { useUserIdentity } from '../features/identity/IdentityProvider';
 import { RequestError } from '../graphql/errors';
 import { isNonWhitespaceId } from '../graphql/id';
-import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { useFlashSale } from '../hooks/useFlashSale';
 import { useMyPurchase } from '../hooks/useMyPurchase';
 import { usePurchaseItem } from '../hooks/usePurchaseItem';
 
 export function FlashSalePage() {
   const { flashSaleId = '' } = useParams();
-  const [userId, setUserId] = useState('');
-  const debouncedUserId = useDebouncedValue(userId, 300);
+  const { userId } = useUserIdentity();
 
   const saleQuery = useFlashSale(flashSaleId);
-  const myPurchaseQuery = useMyPurchase(flashSaleId, debouncedUserId);
+  const myPurchaseQuery = useMyPurchase(flashSaleId, userId ?? '');
   const purchaseMutation = usePurchaseItem();
 
+  const mutationForCurrentUser = purchaseMutation.variables?.userId === userId;
   const myPurchaseInitialPending = myPurchaseQuery.isPending && !myPurchaseQuery.isError;
-  const userIdValid = isNonWhitespaceId(userId);
+  const userIdValid = isNonWhitespaceId(userId ?? '');
   const buyDisabled = isBuyDisabled({
     flashSaleError: saleQuery.isError,
     flashSaleLoading: saleQuery.isPending,
     flashSaleStatus: saleQuery.data?.status,
-    mutationPending: purchaseMutation.isPending,
+    mutationPending: purchaseMutation.isPending && mutationForCurrentUser,
     myPurchaseInitialPending,
     purchased: myPurchaseQuery.data?.purchased,
     userIdValid,
@@ -49,23 +49,30 @@ export function FlashSalePage() {
         : undefined;
 
   const purchaseError =
-    purchaseMutation.error instanceof RequestError
+    mutationForCurrentUser && purchaseMutation.error instanceof RequestError
       ? purchaseMutation.error
-      : purchaseMutation.error
+      : mutationForCurrentUser && purchaseMutation.error
         ? new RequestError(purchaseMutation.error.message, 'UNKNOWN')
         : undefined;
 
   function onBuy() {
+    if (userId === null || !isNonWhitespaceId(userId)) {
+      return;
+    }
     purchaseMutation.mutate({ flashSaleId, userId });
   }
 
   function onRetryPurchase() {
+    if (userId === null || !isNonWhitespaceId(userId)) {
+      return;
+    }
     purchaseMutation.reset();
     purchaseMutation.mutate({ flashSaleId, userId });
   }
 
   return (
     <main className="shell" data-testid="flash-sale-page">
+      <IdentityStrip />
       <p className="eyebrow">Flash Sale</p>
       <h1>Sale {flashSaleId}</h1>
 
@@ -83,7 +90,7 @@ export function FlashSalePage() {
 
       {saleQuery.data ? <SaleStatusCard sale={saleQuery.data} /> : null}
 
-      {myPurchaseQuery.isPending && isNonWhitespaceId(debouncedUserId) ? (
+      {myPurchaseQuery.isPending && userIdValid ? (
         <p data-testid="my-purchase-loading">Checking purchase status…</p>
       ) : null}
 
@@ -99,14 +106,13 @@ export function FlashSalePage() {
 
       <PurchasePanel
         buyDisabled={buyDisabled}
-        buyPending={purchaseMutation.isPending}
+        buyPending={purchaseMutation.isPending && mutationForCurrentUser}
         onBuy={onBuy}
-        onUserIdChange={setUserId}
         purchased={myPurchaseQuery.data?.purchased}
-        userId={userId}
+        showGuestHint={userId === null}
       />
 
-      {purchaseMutation.isPending ? (
+      {purchaseMutation.isPending && mutationForCurrentUser ? (
         <p data-testid="purchase-pending">Submitting purchase…</p>
       ) : null}
 
@@ -122,7 +128,7 @@ export function FlashSalePage() {
         />
       ) : null}
 
-      {!purchaseMutation.isPending && purchaseMutation.data ? (
+      {!purchaseMutation.isPending && purchaseMutation.data && mutationForCurrentUser ? (
         <PurchaseOutcomeBanner result={purchaseMutation.data} />
       ) : null}
     </main>

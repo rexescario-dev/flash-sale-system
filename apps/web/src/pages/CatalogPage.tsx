@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
 import { FlashSaleCard } from '../features/catalog/components/FlashSaleCard';
+import { IdentityStrip } from '../features/identity/components/IdentityStrip';
 import { useFlashSales } from '../hooks/useFlashSales';
 
 export function CatalogPage() {
@@ -42,6 +43,7 @@ export function CatalogPage() {
 
   return (
     <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6" data-testid="catalog-page">
+      <IdentityStrip />
       <p className="mb-2 text-sm font-bold uppercase tracking-wider text-emerald-700">
         Flash Sale System
       </p>
