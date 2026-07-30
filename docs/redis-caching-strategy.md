@@ -17,7 +17,9 @@ Design contract: [EPIC-04 scalability & Redis design](superpowers/specs/2026-07-
 
 **Not owned by Redis:** stock counters, admission control, sale existence for `myPurchase`, anything inside `PurchaseFlow` / Prisma adapters / `@flash-sale/domain`.
 
-**`myPurchases` (#125):** served directly from Postgres (uncached). History list caching and post-SUCCESS invalidation for that list are deferred to #129.
+**`myPurchases` (#125):** served directly from Postgres (uncached).
+
+**#129 scope note:** Issue #129 improves **client-side** TanStack Query invalidation after `purchaseItem` (catalog `flashSales`, sale `flashSale`, `myPurchase`, and `myPurchases` history). It does **not** add Redis caching or server-side invalidation for `myPurchases`. Some older planning documents referenced Redis history caching under #129. Those references are superseded; #129 is limited to client-side TanStack Query invalidation. Introduce any server Redis history cache in a **separate** issue if needed.
 
 Query caches are API read concerns used only by their resolvers. Rate limiting runs **before** `PURCHASE_FLOW.execute` and before any purchase transaction.
 
