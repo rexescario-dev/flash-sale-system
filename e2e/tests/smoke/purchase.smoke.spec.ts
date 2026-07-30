@@ -20,6 +20,6 @@ test.describe('smoke', () => {
     await expect(sale.purchaseOutcomeStatus()).toHaveText('Purchase successful', {
       timeout: 15_000,
     });
-    await expect(page.getByTestId('purchase-id')).toBeVisible();
+    await expect(sale.purchaseId()).toBeVisible();
   });
 });

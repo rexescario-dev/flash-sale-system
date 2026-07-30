@@ -29,6 +29,11 @@ function activeSale(id: string, overrides: Partial<FlashSale> = {}): FlashSale {
   return {
     id,
     endsAt: '2099-12-31T00:00:00.000Z',
+    product: {
+      id: `product-${id}`,
+      description: 'A great widget',
+      name: 'Aurora Headphones',
+    },
     remainingStock: 5,
     startsAt: '2000-01-01T00:00:00.000Z',
     status: 'ACTIVE',
@@ -58,17 +63,45 @@ function renderSale(path: string, options: { userId?: string } = {}) {
   return { queryClient, user };
 }
 
+/**
+ * PurchaseRail and StickyBuyBar are both mounted whenever a sale is loaded
+ * (dual mount is intentional; visibility between them is CSS-only). Any
+ * selector for their shared internals (buy button, buy-helper,
+ * already-purchased, request-error, purchase-outcome, ...) can therefore
+ * match twice. Tests interact with / assert on the first match, since both
+ * surfaces share identical state and handlers.
+ */
+function buyButtons() {
+  return screen.getAllByRole('button', { name: /buy now|buying/i });
+}
+
+function buyButton(): HTMLElement {
+  return first(buyButtons());
+}
+
+function first<T>(items: T[]): T {
+  const item = items[0];
+  if (item === undefined) {
+    throw new Error('Expected at least one matching element');
+  }
+  return item;
+}
+
+function buyHelpers() {
+  return screen.getAllByTestId('buy-helper');
+}
+
 async function identifyViaStrip(user: ReturnType<typeof userEvent.setup>, raw: string) {
-  const identify = screen.queryByTestId('identity-identify');
+  const identify = screen.queryAllByTestId('identity-identify')[0];
   if (identify) {
     await user.click(identify);
   } else {
-    await user.click(screen.getByTestId('identity-change'));
+    await user.click(first(screen.getAllByTestId('identity-change')));
   }
-  const input = screen.getByTestId('identity-email-input');
+  const input = first(screen.getAllByTestId('identity-email-input'));
   await user.clear(input);
   await user.type(input, raw);
-  await user.click(screen.getByTestId('identity-save'));
+  await user.click(first(screen.getAllByTestId('identity-save')));
 }
 
 function installHandlers(options: {
@@ -170,6 +203,16 @@ describe('FlashSalePage', () => {
     localStorage.clear();
   });
 
+  it('mounts both PurchaseRail and StickyBuyBar and shows the product name once loaded', async () => {
+    installHandlers({ flashSale: activeSale('sale-dual') });
+    renderSale('/sales/sale-dual');
+    await screen.findByTestId('sale-status');
+    expect(await screen.findByText('Aurora Headphones')).toBeInTheDocument();
+    expect(screen.getByTestId('purchase-rail')).toBeInTheDocument();
+    expect(screen.getByTestId('sticky-buy-bar')).toBeInTheDocument();
+    expect(screen.getByTestId('back-to-products')).toBeInTheDocument();
+  });
+
   it('renders backend status even when timestamps look outside the window', async () => {
     installHandlers({
       flashSale: activeSale('sale-window', {
@@ -192,7 +235,7 @@ describe('FlashSalePage', () => {
     });
     renderSale('/sales/sale-ended');
     expect(await screen.findByTestId('sale-status')).toHaveTextContent('ENDED');
-    expect(screen.getByRole('button', { name: /buy now/i })).toBeDisabled();
+    expect(buyButton()).toBeDisabled();
   });
 
   it('sends exact route flashSaleId to FlashSale query', async () => {
@@ -214,13 +257,19 @@ describe('FlashSalePage', () => {
     expect(alert).toHaveTextContent(/couldn't complete your request/i);
     expect(alert).not.toHaveTextContent('UNHANDLED_TEST_OPERATION');
     expect(alert).not.toHaveTextContent('Unhandled GraphQL operation');
+    // Desktop purchase surface stays mounted (Buy disabled) when sale fails to load.
+    expect(screen.getByTestId('purchase-rail')).toBeInTheDocument();
+    expect(screen.getByTestId('sticky-buy-bar')).toBeInTheDocument();
   });
 
   it('does not call myPurchase for Guest and shows identify hint', async () => {
     const counters = installHandlers({});
     renderSale('/sales/sale-123');
     await screen.findByTestId('sale-status');
-    expect(screen.getByTestId('identify-to-buy')).toBeInTheDocument();
+    expect(await screen.findByText('Aurora Headphones')).toBeInTheDocument();
+    const helpers = buyHelpers();
+    expect(helpers.length).toBeGreaterThan(0);
+    expect(helpers[0]).toHaveTextContent(/enter your email/i);
     expect(screen.queryByLabelText(/user id/i)).not.toBeInTheDocument();
     expect(counters.myPurchase.size).toBe(0);
   });
@@ -229,9 +278,9 @@ describe('FlashSalePage', () => {
     const counters = installHandlers({});
     const { user } = renderSale('/sales/sale-123');
     await screen.findByTestId('sale-status');
-    await user.click(screen.getByTestId('identity-identify'));
-    await user.type(screen.getByTestId('identity-email-input'), '   ');
-    expect(screen.getByTestId('identity-save')).toBeDisabled();
+    await user.click(first(screen.getAllByTestId('identity-identify')));
+    await user.type(first(screen.getAllByTestId('identity-email-input')), '   ');
+    expect(screen.getAllByTestId('identity-save')[0]).toBeDisabled();
     expect(counters.myPurchase.size).toBe(0);
   });
 
@@ -268,7 +317,7 @@ describe('FlashSalePage', () => {
     await screen.findByTestId('request-error');
     expect(lastUserId).toBe(' user-123 ');
     expect(screen.getByTestId('request-error')).not.toHaveTextContent('shard-9');
-    expect(screen.getByRole('button', { name: /buy now/i })).toBeEnabled();
+    expect(buyButton()).toBeEnabled();
   });
 
   it('disables Buy when already purchased', async () => {
@@ -276,8 +325,9 @@ describe('FlashSalePage', () => {
       myPurchase: { purchaseId: 'p-9', purchased: true, purchasedAt: '2026-01-01T00:00:00.000Z' },
     });
     renderSale('/sales/sale-123', { userId: 'user-1' });
-    expect(await screen.findByTestId('already-purchased')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /buy now/i })).toBeDisabled();
+    const alreadyPurchased = await screen.findAllByTestId('already-purchased');
+    expect(alreadyPurchased[0]).toBeInTheDocument();
+    expect(buyButton()).toBeDisabled();
   });
 
   it('preserves exact raw userId and route flashSaleId on purchaseItem', async () => {
@@ -292,10 +342,10 @@ describe('FlashSalePage', () => {
     await screen.findByTestId('sale-status');
     await identifyViaStrip(user, ' user-123 ');
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /buy now/i })).toBeEnabled();
+      expect(buyButton()).toBeEnabled();
     });
-    await user.click(screen.getByRole('button', { name: /buy now/i }));
-    await screen.findByTestId('purchase-outcome');
+    await user.click(buyButton());
+    await screen.findAllByTestId('purchase-outcome');
     expect(purchaseVars[0]?.flashSaleId).toBe('Sale_ABC-123.~test');
     expect(purchaseVars[0]?.userId).toBe(' user-123 ');
   });
@@ -331,10 +381,12 @@ describe('FlashSalePage', () => {
     const { user } = renderSale('/sales/sale-123', { userId: 'user-1' });
     await screen.findByTestId('sale-status');
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /buy now/i })).toBeEnabled();
+      expect(buyButton()).toBeEnabled();
     });
-    await user.click(screen.getByRole('button', { name: /buy now/i }));
-    expect(await screen.findByTestId('purchase-pending')).toBeInTheDocument();
+    await user.click(buyButton());
+    await waitFor(() => {
+      expect(buyButtons()[0]).toHaveTextContent(/buying/i);
+    });
     expect(screen.queryByTestId('purchase-outcome')).not.toBeInTheDocument();
 
     resolvePurchase?.(
@@ -348,9 +400,8 @@ describe('FlashSalePage', () => {
         },
       }),
     );
-    expect(await screen.findByTestId('purchase-outcome-status')).toHaveTextContent(
-      'Purchase successful',
-    );
+    const statuses = await screen.findAllByTestId('purchase-outcome-status');
+    expect(statuses[0]).toHaveTextContent('Purchase successful');
   });
 
   it('invalidates flashSale and matching myPurchase after mutation settlement including errors', async () => {
@@ -368,8 +419,8 @@ describe('FlashSalePage', () => {
       expect(counters.myPurchase.get(keyOf('sale-123', 'user-456'))).toBe(1);
     });
     const flashBefore = counters.flashSale.get('sale-123') ?? 0;
-    await user.click(screen.getByRole('button', { name: /buy now/i }));
-    await screen.findByTestId('request-error');
+    await user.click(buyButton());
+    await screen.findAllByTestId('request-error');
     await waitFor(() => {
       expect(counters.flashSale.get('sale-123')).toBeGreaterThan(flashBefore);
       expect(counters.myPurchase.get(keyOf('sale-123', 'user-456'))).toBeGreaterThan(1);
@@ -384,10 +435,11 @@ describe('FlashSalePage', () => {
     const { user } = renderSale('/sales/sale-123', { userId: 'user-1' });
     await screen.findByTestId('sale-status');
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /buy now/i })).toBeEnabled();
+      expect(buyButton()).toBeEnabled();
     });
-    await user.click(screen.getByRole('button', { name: /buy now/i }));
-    expect(await screen.findByTestId('purchase-outcome-status')).toHaveTextContent('Sold out');
+    await user.click(buyButton());
+    const statuses = await screen.findAllByTestId('purchase-outcome-status');
+    expect(statuses[0]).toHaveTextContent('Sold out');
     expect(screen.queryByText(/purchase successful/i)).not.toBeInTheDocument();
   });
 
@@ -403,17 +455,15 @@ describe('FlashSalePage', () => {
     const { user } = renderSale('/sales/sale-123', { userId: 'user-1' });
     await screen.findByTestId('sale-status');
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /buy now/i })).toBeEnabled();
+      expect(buyButton()).toBeEnabled();
     });
-    await user.click(screen.getByRole('button', { name: /buy now/i }));
-    expect(await screen.findByTestId('request-error')).toHaveTextContent(
-      /couldn't complete your purchase/i,
-    );
-    expect(screen.getByTestId('request-error')).not.toHaveTextContent('warehouse');
-    await user.click(screen.getByRole('button', { name: /try again/i }));
-    expect(await screen.findByTestId('purchase-outcome-status')).toHaveTextContent(
-      'Purchase successful',
-    );
+    await user.click(buyButton());
+    const requestErrors = await screen.findAllByTestId('request-error');
+    expect(requestErrors[0]).toHaveTextContent(/couldn't complete your purchase/i);
+    expect(requestErrors[0]).not.toHaveTextContent('warehouse');
+    await user.click(first(screen.getAllByRole('button', { name: /try again/i })));
+    const statuses = await screen.findAllByTestId('purchase-outcome-status');
+    expect(statuses[0]).toHaveTextContent('Purchase successful');
     expect(screen.queryByTestId('request-error')).not.toBeInTheDocument();
   });
 
@@ -431,10 +481,11 @@ describe('FlashSalePage', () => {
       const { user } = renderSale('/sales/sale-123', { userId: `user-${outcome.status}` });
       await screen.findByTestId('sale-status');
       await waitFor(() => {
-        expect(screen.getByRole('button', { name: /buy now/i })).toBeEnabled();
+        expect(buyButton()).toBeEnabled();
       });
-      await user.click(screen.getByRole('button', { name: /buy now/i }));
-      expect(await screen.findByTestId('purchase-outcome-status')).toBeInTheDocument();
+      await user.click(buyButton());
+      const statuses = await screen.findAllByTestId('purchase-outcome-status');
+      expect(statuses[0]).toBeInTheDocument();
       cleanup();
       localStorage.clear();
     }
@@ -451,16 +502,17 @@ describe('FlashSalePage', () => {
       },
     });
     const { user } = renderSale('/sales/sale-123', { userId: 'user-a' });
-    expect(await screen.findByTestId('already-purchased')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /buy now/i })).toBeDisabled();
+    const alreadyPurchased = await screen.findAllByTestId('already-purchased');
+    expect(alreadyPurchased[0]).toBeInTheDocument();
+    expect(buyButton()).toBeDisabled();
 
     await identifyViaStrip(user, 'user-b');
     await waitFor(() => {
       expect(screen.queryByTestId('already-purchased')).not.toBeInTheDocument();
     });
-    expect(screen.getByTestId('identity-status')).toHaveTextContent('Shopping as user-b');
+    expect(screen.getAllByTestId('identity-status')[0]).toHaveTextContent('Shopping as user-b');
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /buy now/i })).toBeEnabled();
+      expect(buyButton()).toBeEnabled();
     });
   });
 
@@ -475,10 +527,11 @@ describe('FlashSalePage', () => {
     const { user } = renderSale('/sales/sale-123', { userId: 'user-a' });
     await screen.findByTestId('sale-status');
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /buy now/i })).toBeEnabled();
+      expect(buyButton()).toBeEnabled();
     });
-    await user.click(screen.getByRole('button', { name: /buy now/i }));
-    expect(await screen.findByTestId('purchase-outcome')).toBeInTheDocument();
+    await user.click(buyButton());
+    const purchaseOutcomes = await screen.findAllByTestId('purchase-outcome');
+    expect(purchaseOutcomes[0]).toBeInTheDocument();
 
     await identifyViaStrip(user, 'user-b');
     await waitFor(() => {
