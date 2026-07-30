@@ -2,11 +2,41 @@
 
 A scalable flash-sale system built with NestJS, GraphQL, React, TypeScript, PostgreSQL, Redis, Playwright, and k6.
 
-> **EPIC-01:** Monorepo foundation, NestJS API, React/Vite web, Docker Compose, Prisma, GraphQL scaffolding, quality hooks, and CI — with no flash-sale business logic yet.
+## Try the app
+
+> **Reviewers / first look — start here.**  
+> Bring up Docker, load demo seed data, and exercise the UI in a few minutes. Compose alone migrates an empty database; the seed step is what populates flash sales you can browse and purchase.
+
+**Prerequisites:** Docker (Compose), plus Node.js `>=20 <23` and [pnpm](https://pnpm.io) 10+ for the seed command.
+
+```bash
+cp .env.example .env
+docker compose up --build -d
+
+# Wait until the API is healthy
+curl -sf http://localhost:3000/health
+
+pnpm install
+pnpm --filter api e2e:seed
+```
+
+**Open the app:** [http://localhost:5173](http://localhost:5173)
+
+**What to try**
+
+1. Confirm the catalog shows seeded sales (for example **E2E Active Ten-Pack**, **E2E Active Last Unit**).
+2. Set a local user id in the identity strip (required before purchase).
+3. Open an **ACTIVE** sale and complete a purchase; check **My purchases**.
+
+Also available: API [http://localhost:3000](http://localhost:3000) · GraphQL [http://localhost:3000/graphql](http://localhost:3000/graphql).
+
+Full local workflows, env details, and troubleshooting: [Local development](docs/local-development.md).
+
+---
 
 ## Quick Start
 
-The **full Docker Compose stack** is the recommended fastest first run — no Node.js or pnpm required on the host.
+Stack-only bring-up (no seed) — useful when you only need containers healthy. **No Node.js/pnpm on the host.** For a catalog you can click through, use [Try the app](#try-the-app) above.
 
 **Prerequisite:** Docker (Docker Compose)
 
