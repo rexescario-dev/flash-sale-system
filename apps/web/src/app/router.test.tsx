@@ -48,6 +48,11 @@ describe('AppRoutes', () => {
     expect(screen.getByTestId('back-to-products')).toBeInTheDocument();
   });
 
+  it('renders purchases page at /purchases', async () => {
+    renderAt('/purchases');
+    expect(await screen.findByTestId('purchases-page')).toBeInTheDocument();
+  });
+
   it('renders not found for unknown routes', () => {
     renderAt('/nope');
     expect(screen.getByRole('heading', { name: /not found/i })).toBeInTheDocument();

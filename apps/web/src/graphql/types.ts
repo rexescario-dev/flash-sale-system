@@ -36,6 +36,13 @@ export type MyPurchaseResult = {
   purchasedAt: null | string;
 };
 
+export type PurchaseHistoryItem = {
+  id: string;
+  flashSale: { id: string };
+  product: Product;
+  purchasedAt: string;
+};
+
 export type PurchaseItemResult = {
   purchaseId: null | string;
   message: string;
