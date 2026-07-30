@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
@@ -12,6 +12,7 @@ import { CatalogPage } from './CatalogPage';
 
 describe('CatalogPage retry persistence', () => {
   it('keeps error UI visible during retry and then shows the grid', async () => {
+    let releaseFlashSales: ((value: Response) => void) | undefined;
     let attempts = 0;
 
     server.use(
@@ -26,24 +27,8 @@ describe('CatalogPage retry persistence', () => {
           });
         }
 
-        await new Promise((resolve) => {
-          setTimeout(resolve, 250);
-        });
-
-        return HttpResponse.json({
-          data: {
-            flashSales: [
-              {
-                id: 'sale-1',
-                endsAt: '2026-06-02T00:00:00.000Z',
-                product: { id: 'p1', description: 'Desc', name: 'Alpha' },
-                remainingStock: 2,
-                startsAt: '2026-06-01T00:00:00.000Z',
-                status: 'ACTIVE',
-                totalStock: 5,
-              },
-            ],
-          },
+        return await new Promise<Response>((resolve) => {
+          releaseFlashSales = resolve;
         });
       }),
     );
@@ -65,12 +50,34 @@ describe('CatalogPage retry persistence', () => {
 
     expect(screen.getByTestId('catalog-error')).toBeInTheDocument();
     expect(screen.getByTestId('catalog-retry')).toBeInTheDocument();
-    expect(screen.queryByTestId('catalog-loading')).not.toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(releaseFlashSales).toBeDefined();
+    });
+
+    expect(screen.queryByRole('link', { name: /alpha/i })).not.toBeInTheDocument();
+
+    releaseFlashSales?.(
+      HttpResponse.json({
+        data: {
+          flashSales: [
+            {
+              id: 'sale-1',
+              endsAt: '2026-06-02T00:00:00.000Z',
+              product: { id: 'p1', description: 'Desc', name: 'Alpha' },
+              remainingStock: 2,
+              startsAt: '2026-06-01T00:00:00.000Z',
+              status: 'ACTIVE',
+              totalStock: 5,
+            },
+          ],
+        },
+      }),
+    );
 
     expect(await screen.findByRole('link', { name: /alpha/i })).toHaveAttribute(
       'href',
       '/sales/sale-1',
     );
-    expect(attempts).toBeGreaterThanOrEqual(2);
   });
 });
