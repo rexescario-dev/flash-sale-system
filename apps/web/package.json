@@ -22,6 +22,7 @@
   "devDependencies": {
     "@flash-sale/eslint-config": "workspace:*",
     "@flash-sale/typescript-config": "workspace:*",
+    "@tailwindcss/vite": "^4.3.3",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.1",
@@ -31,11 +32,10 @@
     "eslint": "^9.29.0",
     "jsdom": "^26.1.0",
     "msw": "^2.15.0",
+    "tailwindcss": "^4.3.3",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.34.1",
     "vite": "^6.3.5",
-    "vitest": "^3.2.4",
-    "tailwindcss": "file:vendor/tailwindcss",
-    "@tailwindcss/vite": "file:vendor/tailwindcss-vite"
+    "vitest": "^3.2.4"
   }
 }

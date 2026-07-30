@@ -1,9 +1,0 @@
-{
-  "name": "@tailwindcss/vite",
-  "version": "0.0.0-local-bridge",
-  "description": "No-op Vite plugin bridge for #122 until real @tailwindcss/vite can be installed.",
-  "type": "module",
-  "exports": {
-    ".": "./index.js"
-  }
-}
