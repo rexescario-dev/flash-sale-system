@@ -23,14 +23,24 @@ export class SalePage {
   /** Commit opaque userId via IdentityStrip (Identify/Change → Save). */
   async enterUserId(userId: string): Promise<void> {
     const surface = this.visiblePurchaseSurface();
+    await surface.waitFor({ state: 'visible' });
+
     const identify = surface.getByTestId('identity-identify');
+    const change = surface.getByTestId('identity-change');
+    // Wait for a settled strip action (guest Identify or identified Change) — avoid
+    // racing before either button is mounted.
+    await identify.or(change).waitFor({ state: 'visible' });
     if (await identify.isVisible()) {
       await identify.click();
     } else {
-      await surface.getByTestId('identity-change').click();
+      await change.click();
     }
-    await surface.getByTestId('identity-email-input').fill(userId);
+
+    const input = surface.getByTestId('identity-email-input');
+    await input.waitFor({ state: 'visible' });
+    await input.fill(userId);
     await surface.getByTestId('identity-save').click();
+    await surface.getByTestId('identity-status').waitFor({ state: 'visible' });
   }
 
   async gotoSale(flashSaleId: string): Promise<void> {
