@@ -268,12 +268,12 @@ describe('flash sale PostgreSQL schema (#15)', () => {
       ),
     ).toBe(true);
 
-    // #15 contract: no standalone purchases(user_id) index (composite unique is #16).
+    // #125: standalone purchases(user_id) index for myPurchases history lookup.
     expect(
       indexes.some(
         (idx) => idx.tablename === 'purchases' && /\(\s*user_id\s*\)/.test(idx.indexdef),
       ),
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it('defines the four named FlashSale CHECK constraints', async () => {
