@@ -31,29 +31,29 @@ See **§8 Out of scope**.
 
 ## 3. Locked decisions
 
-| Decision              | Choice                                                                                                                                                          |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Smoke vs regression   | **B** — smoke = catalog-first happy path; edges in regression                                                                                                   |
-| Selectors             | **C** — roles first; reuse existing testids; add testid only when blocked; **do not** rename existing testids to match issue wording                            |
-| Seed matrix           | **A** — ACTIVE(10), ACTIVE(1), SOLD_OUT, UPCOMING, ENDED; pre-seeded SOLD_OUT **complements** (does not replace) the transition regression                      |
-| Post-buy navigation   | **A** — click CustomerNav My Purchases (no `goto` fallback in smoke)                                                                                            |
-| E2E structure         | **1** — page objects + thin specs                                                                                                                               |
-| #129 posture          | Validate post-purchase **observable user-facing behavior** after invalidation/refetch; **do not** depend on or assert cached state; no Redis assertions         |
-| Regression isolation  | Each regression spec independently executable against a freshly seeded environment; no ordering dependencies between regressions                                |
-| Roles vs testid       | Prefer accessible names (`getByRole`) over `data-testid` whenever both are equally stable                                                                       |
-| Compose / vendor      | Do **not** fix Dockerfile vendor COPY / #133 in this ticket; local verification may use host API/web on alt ports against Compose Postgres/Redis                |
+| Decision             | Choice                                                                                                                                                  |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Smoke vs regression  | **B** — smoke = catalog-first happy path; edges in regression                                                                                           |
+| Selectors            | **C** — roles first; reuse existing testids; add testid only when blocked; **do not** rename existing testids to match issue wording                    |
+| Seed matrix          | **A** — ACTIVE(10), ACTIVE(1), SOLD_OUT, UPCOMING, ENDED; pre-seeded SOLD_OUT **complements** (does not replace) the transition regression              |
+| Post-buy navigation  | **A** — click CustomerNav My Purchases (no `goto` fallback in smoke)                                                                                    |
+| E2E structure        | **1** — page objects + thin specs                                                                                                                       |
+| #129 posture         | Validate post-purchase **observable user-facing behavior** after invalidation/refetch; **do not** depend on or assert cached state; no Redis assertions |
+| Regression isolation | Each regression spec independently executable against a freshly seeded environment; no ordering dependencies between regressions                        |
+| Roles vs testid      | Prefer accessible names (`getByRole`) over `data-testid` whenever both are equally stable                                                               |
+| Compose / vendor     | Do **not** fix Dockerfile vendor COPY / #133 in this ticket; local verification may use host API/web on alt ports against Compose Postgres/Redis        |
 
 ## 4. Seed matrix
 
 Canonical entrypoint remains Playwright `globalSetup` → `pnpm --filter api e2e:seed`. Specs read IDs via `loadSeedState()` / typed `SeedState` — **never hard-code sale UUIDs** in specs.
 
-| SeedState key       | Fixture                         | Purpose                                                                 |
-| ------------------- | ------------------------------- | ----------------------------------------------------------------------- |
-| `activeStock10Id`   | ACTIVE, stock 10                | Smoke happy path; deep-link; user switch; duplicate                     |
-| `activeStock1Id`    | ACTIVE, stock 1                 | **Only** runtime ACTIVE → SOLD_OUT transition                           |
-| `soldOutId`         | Pre-exhausted SOLD_OUT          | Static catalog/detail status + Buy disabled                             |
-| `upcomingId`        | UPCOMING                        | Status visible, Buy disabled                                            |
-| `endedId`           | ENDED                           | Status visible, Buy disabled                                            |
+| SeedState key     | Fixture                | Purpose                                             |
+| ----------------- | ---------------------- | --------------------------------------------------- |
+| `activeStock10Id` | ACTIVE, stock 10       | Smoke happy path; deep-link; user switch; duplicate |
+| `activeStock1Id`  | ACTIVE, stock 1        | **Only** runtime ACTIVE → SOLD_OUT transition       |
+| `soldOutId`       | Pre-exhausted SOLD_OUT | Static catalog/detail status + Buy disabled         |
+| `upcomingId`      | UPCOMING               | Status visible, Buy disabled                        |
+| `endedId`         | ENDED                  | Status visible, Buy disabled                        |
 
 ### Product naming
 
@@ -80,13 +80,13 @@ e2e/
 
 ### Separation of responsibilities
 
-| Unit           | Responsibility                                                                                         |
-| -------------- | ------------------------------------------------------------------------------------------------------ |
-| `CatalogPage`  | Catalog interactions + catalog-scoped status expectations                                              |
-| `SalePage`     | Sale detail: identify, buy, outcomes, buy disabled, detail status — **no** cross-page navigation       |
-| `PurchasesPage`| Purchase history visibility / empty / expect specific purchase                                         |
-| `CustomerNav`  | Cross-page nav only (`openFlashSales`, `openPurchases`)                                                |
-| Specs          | Compose page-object methods into journeys; own scenario logic                                          |
+| Unit            | Responsibility                                                                                   |
+| --------------- | ------------------------------------------------------------------------------------------------ |
+| `CatalogPage`   | Catalog interactions + catalog-scoped status expectations                                        |
+| `SalePage`      | Sale detail: identify, buy, outcomes, buy disabled, detail status — **no** cross-page navigation |
+| `PurchasesPage` | Purchase history visibility / empty / expect specific purchase                                   |
+| `CustomerNav`   | Cross-page nav only (`openFlashSales`, `openPurchases`)                                          |
+| Specs           | Compose page-object methods into journeys; own scenario logic                                    |
 
 ### CatalogPage (intent API)
 
@@ -138,13 +138,13 @@ Replaces today’s deep-link-only smoke. Confirms catalog routing, identity, mut
 
 ### Regression (independent specs)
 
-| Spec                    | Asserts                                                                                                                                                          |
-| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Deep-link purchase      | Alternate entry: `sale.gotoSale(activeStock10)` → identify → buy → success                                                                                       |
-| Duplicate (keep)        | Already purchased + Buy disabled; reload still gated — keep if already stable; no rewrite for structure alone                                                    |
-| Sold-out transition     | ACTIVE(1) → buy last unit → detail status SOLD_OUT — complements pre-seeded SOLD_OUT                                                                             |
-| Status gates            | For pre-seeded SOLD_OUT / UPCOMING / ENDED: verify the expected disabled state and status on the surface under test (catalog, detail, or both). Avoid bundling unrelated surface assertions into a single opaque expectation. |
-| User switch             | (1) A buys ACTIVE(10); (2) switch to B; (3) B not already-purchased; (4) B can buy; (5) B’s purchases page does **not** display A’s purchase. Optional A revisit **not** required |
+| Spec                | Asserts                                                                                                                                                                                                                       |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Deep-link purchase  | Alternate entry: `sale.gotoSale(activeStock10)` → identify → buy → success                                                                                                                                                    |
+| Duplicate (keep)    | Already purchased + Buy disabled; reload still gated — keep if already stable; no rewrite for structure alone                                                                                                                 |
+| Sold-out transition | ACTIVE(1) → buy last unit → detail status SOLD_OUT — complements pre-seeded SOLD_OUT                                                                                                                                          |
+| Status gates        | For pre-seeded SOLD_OUT / UPCOMING / ENDED: verify the expected disabled state and status on the surface under test (catalog, detail, or both). Avoid bundling unrelated surface assertions into a single opaque expectation. |
+| User switch         | (1) A buys ACTIVE(10); (2) switch to B; (3) B not already-purchased; (4) B can buy; (5) B’s purchases page does **not** display A’s purchase. Optional A revisit **not** required                                             |
 
 **Principle:** Each regression is independently executable against a freshly seeded environment. Unique `userId`s per test (`Date.now()` / random). Keep `workers: 1`.
 

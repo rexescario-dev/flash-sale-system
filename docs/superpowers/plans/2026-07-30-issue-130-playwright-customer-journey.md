@@ -43,17 +43,17 @@ E2E_API_HEALTH_URL=http://127.0.0.1:3001/health E2E_BASE_URL=http://127.0.0.1:51
 
 ## File map
 
-| Path | Responsibility |
-| ---- | -------------- |
-| `apps/api/test/e2e/seed/scenarios.ts` | Full status matrix + stable product names |
-| `apps/api/test/e2e/seed/seed.ts` | `SeedState` (sale IDs + product names), plant, Redis clear |
-| `e2e/tests/helpers/seed-state.ts` | Typed `loadSeedState()` — mirror API `SeedState` shape exactly until a shared type exists |
-| `e2e/pages/customer-nav.ts` | Cross-page nav helper |
-| `e2e/pages/catalog.page.ts` | Catalog page object |
-| `e2e/pages/purchases.page.ts` | Purchases page object |
-| `e2e/pages/sale.page.ts` | Extend sale detail helpers (no cross-page nav) |
-| `e2e/tests/smoke/…` | Replace deep-link-only smoke with catalog-first journey |
-| `e2e/tests/regression/…` | Deep-link; keep duplicate + sold-out; add status gates + user switch (new or extend existing, consistent with suite organization) |
+| Path                                  | Responsibility                                                                                                                    |
+| ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/api/test/e2e/seed/scenarios.ts` | Full status matrix + stable product names                                                                                         |
+| `apps/api/test/e2e/seed/seed.ts`      | `SeedState` (sale IDs + product names), plant, Redis clear                                                                        |
+| `e2e/tests/helpers/seed-state.ts`     | Typed `loadSeedState()` — mirror API `SeedState` shape exactly until a shared type exists                                         |
+| `e2e/pages/customer-nav.ts`           | Cross-page nav helper                                                                                                             |
+| `e2e/pages/catalog.page.ts`           | Catalog page object                                                                                                               |
+| `e2e/pages/purchases.page.ts`         | Purchases page object                                                                                                             |
+| `e2e/pages/sale.page.ts`              | Extend sale detail helpers (no cross-page nav)                                                                                    |
+| `e2e/tests/smoke/…`                   | Replace deep-link-only smoke with catalog-first journey                                                                           |
+| `e2e/tests/regression/…`              | Deep-link; keep duplicate + sold-out; add status gates + user switch (new or extend existing, consistent with suite organization) |
 
 ---
 
@@ -73,14 +73,14 @@ Task 7  →  Full e2e verification (smoke + regression)
 
 ## Design summary (approved)
 
-| Concern | Decision |
-| ------- | -------- |
-| Smoke | Catalog-first happy path ending at My Purchases via nav click |
+| Concern    | Decision                                                                  |
+| ---------- | ------------------------------------------------------------------------- |
+| Smoke      | Catalog-first happy path ending at My Purchases via nav click             |
 | Regression | Deep-link, duplicate, transition, status gates, user switch — independent |
-| Selectors | Roles first; existing testids; no renames for issue wording |
-| Seed | ACTIVE(10/1) + SOLD_OUT + UPCOMING + ENDED |
-| Structure | Page objects + thin specs |
-| #129 | Observable UI only |
+| Selectors  | Roles first; existing testids; no renames for issue wording               |
+| Seed       | ACTIVE(10/1) + SOLD_OUT + UPCOMING + ENDED                                |
+| Structure  | Page objects + thin specs                                                 |
+| #129       | Observable UI only                                                        |
 
 **Product names:** Use **stable, unique, human-readable** names chosen at implementation time. Exact string literals are **not** part of the feature contract. Specs must consume them via `SeedState.products` (never hard-code names in specs).
 
@@ -736,18 +736,18 @@ EOF
 
 ## Spec coverage self-check
 
-| Spec requirement | Task |
-| ---------------- | ---- |
-| Seed matrix ACTIVE(10/1)/SOLD_OUT/UPCOMING/ENDED + unique names | Task 1 |
-| Page objects + CustomerNav; roles-first selectors | Task 2 |
-| Catalog-first smoke via nav → this purchase visible | Task 3 |
-| Deep-link regression | Task 4 |
-| Keep duplicate + sold-out transition unchanged | Task 4 + Task 7 checklist |
-| Status gates (diagnosable surfaces) | Task 5 |
-| User switch (B empty before buy; B may buy; B sees own purchase) | Task 6 |
-| #129 observable UI / no stale cache | Tasks 3–6 |
-| Full acceptance / workers:1 | Task 7 |
-| Out of scope #128/#133/#134 / no testid renames | Honored throughout |
+| Spec requirement                                                 | Task                      |
+| ---------------------------------------------------------------- | ------------------------- |
+| Seed matrix ACTIVE(10/1)/SOLD_OUT/UPCOMING/ENDED + unique names  | Task 1                    |
+| Page objects + CustomerNav; roles-first selectors                | Task 2                    |
+| Catalog-first smoke via nav → this purchase visible              | Task 3                    |
+| Deep-link regression                                             | Task 4                    |
+| Keep duplicate + sold-out transition unchanged                   | Task 4 + Task 7 checklist |
+| Status gates (diagnosable surfaces)                              | Task 5                    |
+| User switch (B empty before buy; B may buy; B sees own purchase) | Task 6                    |
+| #129 observable UI / no stale cache                              | Tasks 3–6                 |
+| Full acceptance / workers:1                                      | Task 7                    |
+| Out of scope #128/#133/#134 / no testid renames                  | Honored throughout        |
 
 ## Placeholder / consistency scan
 
