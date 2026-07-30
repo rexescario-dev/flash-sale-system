@@ -14,6 +14,11 @@ const FLASH_SALE_QUERY = gql`
       totalStock
       startsAt
       endsAt
+      product {
+        id
+        name
+        description
+      }
     }
   }
 `;

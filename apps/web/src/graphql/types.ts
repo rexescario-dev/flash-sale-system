@@ -6,6 +6,7 @@ export type PurchaseOutcome =
 export type FlashSale = {
   id: string;
   endsAt: string;
+  product: Product;
   remainingStock: number;
   startsAt: string;
   status: FlashSaleStatus;
