@@ -20,11 +20,11 @@ Satisfied by documenting **both** the full Docker Compose workflow and the host/
 
 **Hybrid + Extract (Approach 1 / location C):**
 
-| Surface                         | Role                                                                 |
-| ------------------------------- | -------------------------------------------------------------------- |
-| `docs/local-development.md`     | **Canonical** local-development reference                            |
-| `README.md` Quick Start         | Concise onboarding (~5 minutes); Compose-first; links to the guide   |
-| Remaining README non-setup bits | Unchanged until dedicated EPIC-08 issues or #73                      |
+| Surface                         | Role                                                               |
+| ------------------------------- | ------------------------------------------------------------------ |
+| `docs/local-development.md`     | **Canonical** local-development reference                          |
+| `README.md` Quick Start         | Concise onboarding (~5 minutes); Compose-first; links to the guide |
+| Remaining README non-setup bits | Unchanged until dedicated EPIC-08 issues or #73                    |
 
 Prefer **move, don’t rewrite** when extracting from the current README. Preserve user-facing local-dev notes (for example port / Redis collision guidance) by moving them. Content that is not local-development-specific stays in the README.
 
@@ -47,12 +47,12 @@ Prefer **move, don’t rewrite** when extracting from the current README. Preser
 
 ## Ownership model
 
-| Concern                         | Owner after #67                                      |
-| ------------------------------- | ---------------------------------------------------- |
-| How to run locally (detail)     | `docs/local-development.md`                          |
-| Fastest first run               | `README.md` Quick Start                              |
-| How the system works / design   | Stay in README (or later dedicated docs), not #67    |
-| Final README as doc hub         | #73                                                  |
+| Concern                       | Owner after #67                                   |
+| ----------------------------- | ------------------------------------------------- |
+| How to run locally (detail)   | `docs/local-development.md`                       |
+| Fastest first run             | `README.md` Quick Start                           |
+| How the system works / design | Stay in README (or later dedicated docs), not #67 |
+| Final README as doc hub       | #73                                               |
 
 **Conflict rule (DoD):** After extraction, no competing step-by-step setup remains between README and `docs/local-development.md`. README = Quick Start + link; detail lives in the guide.
 

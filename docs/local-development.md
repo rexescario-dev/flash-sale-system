@@ -178,10 +178,10 @@ For E2E lifecycle, seed ownership, and CI requirements, see [README — E2E](../
 
 Locally essential commands. For build, lint, test, format, and the full script list, see [README — Scripts](../README.md#scripts).
 
-| Command                                  | Use when                               |
-| ---------------------------------------- | -------------------------------------- |
-| `pnpm dev`                               | Start API + web on the host (Path B)   |
-| `pnpm --filter api prisma:migrate:deploy`  | Apply pending migrations (Path B)      |
-| `pnpm --filter api prisma:migrate`       | Create/apply migrations during dev     |
-| `bash scripts/verify-compose.sh`         | Full Compose stack verification        |
-| `pnpm e2e:smoke`                         | Playwright smoke (optional; real stack)|
+| Command                                   | Use when                                |
+| ----------------------------------------- | --------------------------------------- |
+| `pnpm dev`                                | Start API + web on the host (Path B)    |
+| `pnpm --filter api prisma:migrate:deploy` | Apply pending migrations (Path B)       |
+| `pnpm --filter api prisma:migrate`        | Create/apply migrations during dev      |
+| `bash scripts/verify-compose.sh`          | Full Compose stack verification         |
+| `pnpm e2e:smoke`                          | Playwright smoke (optional; real stack) |

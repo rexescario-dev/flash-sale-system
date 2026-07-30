@@ -18,35 +18,35 @@
 
 ## File map
 
-| File                                                                  | Responsibility                                                                 |
-| --------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `docs/local-development.md`                                           | **Create** — canonical local-development guide (all setup detail)              |
-| `README.md`                                                           | **Modify** — thin Quick Start; extract setup sections; keep non-setup sections |
+| File                                                                           | Responsibility                                                                 |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| `docs/local-development.md`                                                    | **Create** — canonical local-development guide (all setup detail)              |
+| `README.md`                                                                    | **Modify** — thin Quick Start; extract setup sections; keep non-setup sections |
 | `docs/superpowers/specs/2026-07-31-issue-67-local-development-setup-design.md` | Already written; keep in sync only if implementation discovers a wording fix   |
-| `docs/superpowers/plans/2026-07-31-issue-67-local-development-setup.md` | This plan                                                                      |
+| `docs/superpowers/plans/2026-07-31-issue-67-local-development-setup.md`        | This plan                                                                      |
 
 **Expected unchanged:** `docker-compose.yml`, `.env.example`, `scripts/verify-compose.sh`, `apps/**`, `e2e/**`, `package.json` scripts, CI workflows.
 
 **README sections to extract (setup-primary):**
 
-| Current README section                         | Disposition                                                                 |
-| ---------------------------------------------- | --------------------------------------------------------------------------- |
-| `## Requirements`                              | Fold into Quick Start prereqs + guide Prerequisites (avoid dual full lists) |
-| `## Local stack` (+ Verify Compose)            | Move into guide Path A; README keeps only Quick Start subset                |
-| `## Local endpoints`                           | Move into guide Verification / endpoints; Quick Start lists three URLs      |
-| Port / Redis collision block under `## E2E`    | Move into guide Troubleshooting                                             |
-| Compose DNS / bake notes inside Local stack    | Move into guide Path A / Environment                                        |
+| Current README section                      | Disposition                                                                 |
+| ------------------------------------------- | --------------------------------------------------------------------------- |
+| `## Requirements`                           | Fold into Quick Start prereqs + guide Prerequisites (avoid dual full lists) |
+| `## Local stack` (+ Verify Compose)         | Move into guide Path A; README keeps only Quick Start subset                |
+| `## Local endpoints`                        | Move into guide Verification / endpoints; Quick Start lists three URLs      |
+| Port / Redis collision block under `## E2E` | Move into guide Troubleshooting                                             |
+| Compose DNS / bake notes inside Local stack | Move into guide Path A / Environment                                        |
 
 **README sections to leave (non-setup / project understanding):**
 
-| Section                | Notes                                                                                          |
-| ---------------------- | ---------------------------------------------------------------------------------------------- |
-| Title + overview       | Keep; light touch OK                                                                           |
-| `## Scripts`           | Keep as project reference; do not duplicate as a second full table in the guide                |
-| `## Workspace layout`  | Keep                                                                                           |
+| Section                | Notes                                                                                           |
+| ---------------------- | ----------------------------------------------------------------------------------------------- |
+| Title + overview       | Keep; light touch OK                                                                            |
+| `## Scripts`           | Keep as project reference; do not duplicate as a second full table in the guide                 |
+| `## Workspace layout`  | Keep                                                                                            |
 | `## Redis`             | Keep design + link to `docs/redis-caching-strategy.md`; drop pure Compose-run DNS if duplicated |
-| `## E2E`               | Keep lifecycle, seed ownership, CI Option A; remove moved collision commands                   |
-| `## Architecture note` | Keep                                                                                           |
+| `## E2E`               | Keep lifecycle, seed ownership, CI Option A; remove moved collision commands                    |
+| `## Architecture note` | Keep                                                                                            |
 
 ---
 
