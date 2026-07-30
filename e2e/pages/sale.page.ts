@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
 export class SalePage {
   constructor(private readonly page: Page) {}
@@ -12,10 +12,9 @@ export class SalePage {
   }
 
   /**
-   * PurchaseRail and StickyBuyBar are both mounted whenever a sale is
-   * loaded (dual mount is intentional; visibility between them is
-   * CSS-only based on viewport). Scope to whichever surface is currently
-   * visible so selectors resolve to a single element.
+   * PurchaseRail and StickyBuyBar are both mounted (dual mount is intentional;
+   * visibility is CSS-only). Prefer the desktop rail when both report as
+   * visible; otherwise the sticky bar. Always return a single locator.
    */
   buyButton() {
     return this.visiblePurchaseSurface().getByRole('button', { name: /Buy Now|Buying/ });
@@ -59,12 +58,15 @@ export class SalePage {
   }
 
   userIdInput() {
-    return this.page.getByTestId('identity-email-input');
+    return this.visiblePurchaseSurface().getByTestId('identity-email-input');
   }
 
-  private visiblePurchaseSurface() {
+  private visiblePurchaseSurface(): Locator {
+    // Prefer desktop rail when both are visible; otherwise sticky (mobile).
     return this.page
-      .locator('[data-testid="purchase-rail"], [data-testid="sticky-buy-bar"]')
-      .filter({ visible: true });
+      .getByTestId('purchase-rail')
+      .or(this.page.getByTestId('sticky-buy-bar'))
+      .filter({ visible: true })
+      .first();
   }
 }
