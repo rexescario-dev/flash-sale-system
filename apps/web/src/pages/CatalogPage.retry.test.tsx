@@ -4,6 +4,7 @@ import { http, HttpResponse } from 'msw';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 
+import { IdentityProvider } from '../features/identity/IdentityProvider';
 import { graphqlUrl, readGraphqlBody } from '../test/msw/graphql';
 import { server } from '../test/msw/server';
 import { createTestQueryClient } from '../test/query-client';
@@ -49,9 +50,11 @@ describe('CatalogPage retry persistence', () => {
 
     render(
       <QueryClientProvider client={createTestQueryClient()}>
-        <MemoryRouter>
-          <CatalogPage />
-        </MemoryRouter>
+        <IdentityProvider>
+          <MemoryRouter>
+            <CatalogPage />
+          </MemoryRouter>
+        </IdentityProvider>
       </QueryClientProvider>,
     );
 

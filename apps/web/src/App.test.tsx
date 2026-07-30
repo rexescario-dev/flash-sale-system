@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 
 import { App } from './App';
+import { IdentityProvider } from './features/identity/IdentityProvider';
 import { graphqlUrl, readGraphqlBody } from './test/msw/graphql';
 import { server } from './test/msw/server';
 import { createTestQueryClient } from './test/query-client';
@@ -25,9 +26,11 @@ describe('App', () => {
 
     render(
       <QueryClientProvider client={createTestQueryClient()}>
-        <MemoryRouter initialEntries={['/']}>
-          <App />
-        </MemoryRouter>
+        <IdentityProvider>
+          <MemoryRouter initialEntries={['/']}>
+            <App />
+          </MemoryRouter>
+        </IdentityProvider>
       </QueryClientProvider>,
     );
 

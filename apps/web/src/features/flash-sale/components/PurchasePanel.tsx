@@ -1,30 +1,15 @@
 type Props = {
-  userId: string;
   buyDisabled: boolean;
   buyPending: boolean;
   onBuy: () => void;
-  onUserIdChange: (value: string) => void;
   purchased: boolean | undefined;
+  showGuestHint: boolean;
 };
 
-export function PurchasePanel({
-  userId,
-  buyDisabled,
-  buyPending,
-  onBuy,
-  onUserIdChange,
-  purchased,
-}: Props) {
+export function PurchasePanel({ buyDisabled, buyPending, onBuy, purchased, showGuestHint }: Props) {
   return (
     <section aria-label="Purchase">
-      <label htmlFor="user-id">User ID</label>
-      <input
-        id="user-id"
-        onChange={(event) => {
-          onUserIdChange(event.target.value);
-        }}
-        value={userId}
-      />
+      {showGuestHint ? <p data-testid="identify-to-buy">Identify to buy.</p> : null}
       {purchased === true ? (
         <p data-testid="already-purchased" role="status">
           You have already purchased this item.

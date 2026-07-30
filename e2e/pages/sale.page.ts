@@ -15,8 +15,16 @@ export class SalePage {
     return this.page.getByRole('button', { name: /Buy Now|Buying/ });
   }
 
+  /** Commit opaque userId via IdentityStrip (Identify/Change → Save). */
   async enterUserId(userId: string): Promise<void> {
+    const identify = this.page.getByTestId('identity-identify');
+    if (await identify.isVisible()) {
+      await identify.click();
+    } else {
+      await this.page.getByTestId('identity-change').click();
+    }
     await this.userIdInput().fill(userId);
+    await this.page.getByTestId('identity-save').click();
   }
 
   async gotoSale(flashSaleId: string): Promise<void> {
@@ -40,6 +48,6 @@ export class SalePage {
   }
 
   userIdInput() {
-    return this.page.locator('#user-id');
+    return this.page.getByTestId('identity-email-input');
   }
 }

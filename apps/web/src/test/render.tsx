@@ -4,6 +4,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { render, type RenderOptions } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
+import { IdentityProvider } from '../features/identity/IdentityProvider';
 import { createTestQueryClient } from './query-client';
 
 type Options = Omit<RenderOptions, 'wrapper'> & {
@@ -17,7 +18,9 @@ export function renderApp(ui: ReactElement, options: Options = {}) {
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={initialEntries}>{children}</MemoryRouter>
+        <IdentityProvider>
+          <MemoryRouter initialEntries={initialEntries}>{children}</MemoryRouter>
+        </IdentityProvider>
       </QueryClientProvider>
     );
   }
