@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
 
+import { ErrorState } from '../components/ui/ErrorState';
+import { PageHeader } from '../components/ui/PageHeader';
 import { IdentityStrip } from '../features/identity/components/IdentityStrip';
 import { useUserIdentity } from '../features/identity/IdentityProvider';
 import { PurchaseHistoryPanel } from '../features/purchases/components/PurchaseHistoryPanel';
@@ -26,20 +28,14 @@ export function PurchasesPage() {
     body = <p data-testid="purchases-loading">Loading purchases…</p>;
   } else if (purchasesQuery.isError) {
     body = (
-      <div className="rounded-md bg-white/70 p-4" data-testid="purchases-error" role="alert">
-        <p className="font-semibold">Could not load purchases</p>
-        <p className="mt-1 text-sm">{purchasesQuery.error.message}</p>
-        <button
-          className="mt-3 rounded bg-emerald-700 px-3 py-2 text-sm font-semibold text-white"
-          data-testid="purchases-retry"
-          onClick={() => {
-            void purchasesQuery.refetch();
-          }}
-          type="button"
-        >
-          Try again
-        </button>
-      </div>
+      <ErrorState
+        data-testid="purchases-error"
+        message={purchasesQuery.error.message}
+        onRetry={() => {
+          void purchasesQuery.refetch();
+        }}
+        title="Could not load purchases"
+      />
     );
   } else if ((purchasesQuery.data ?? []).length === 0) {
     body = (
@@ -60,13 +56,11 @@ export function PurchasesPage() {
   return (
     <main className="mx-auto max-w-6xl px-4 py-10 sm:px-6" data-testid="purchases-page">
       <IdentityStrip />
-      <p className="mb-2 text-sm font-bold uppercase tracking-wider text-emerald-700">
-        Flash Sale System
-      </p>
-      <h1 className="mb-2 text-3xl font-semibold text-emerald-950 sm:text-4xl">My purchases</h1>
-      <p className="mb-8 max-w-2xl text-emerald-900/70">
-        Purchase history for your current User ID. This demo is not authenticated private history.
-      </p>
+      <PageHeader
+        description="Purchase history for your current User ID. This demo is not authenticated private history."
+        eyebrow="Flash Sale System"
+        title="My purchases"
+      />
       {body}
     </main>
   );
