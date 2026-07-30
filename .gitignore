@@ -19,6 +19,7 @@ coverage/
 *.log
 npm-debug.log*
 pnpm-debug.log*
+.superpowers/
 
 # IDE / OS
 .DS_Store
