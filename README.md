@@ -4,53 +4,30 @@ A scalable flash-sale system built with NestJS, GraphQL, React, TypeScript, Post
 
 > **EPIC-01:** Monorepo foundation, NestJS API, React/Vite web, Docker Compose, Prisma, GraphQL scaffolding, quality hooks, and CI — with no flash-sale business logic yet.
 
-## Requirements
+## Quick Start
 
-- Docker (Docker Compose) for the full local application stack
-- Node.js 20 (`>=20 <23`) and [pnpm](https://pnpm.io) 10+ only if you use existing non-Compose tooling (quality scripts, E2E helpers, etc.)
+The **full Docker Compose stack** is the recommended fastest first run — no Node.js or pnpm required on the host.
 
-## Local stack
-
-### Full Compose stack
+**Prerequisite:** Docker (Docker Compose)
 
 ```bash
 cp .env.example .env
 docker compose up --build
 ```
 
-Starts the complete five-service stack:
-
-- `flash-sale-postgres`
-- `flash-sale-redis`
-- `flash-sale-migrate` — one-shot Prisma migration; exits with code 0
-- `flash-sale-api`
-- `flash-sale-web` — serves the production web build with `vite preview`
-
-No Node.js or pnpm installation is required on the host for this workflow.
-
-Source changes require rebuilding the images:
-
-```bash
-docker compose up --build
-```
-
-Endpoints:
+**Endpoints:**
 
 - Web: http://localhost:5173
 - API: http://localhost:3000
 - GraphQL: http://localhost:3000/graphql
 
-The API container connects to PostgreSQL and Redis using Compose service DNS (`postgres:5432`, `redis:6379`). The web build bakes `VITE_API_URL=http://localhost:3000` for the host browser.
-
-Keep `.env` at the **repository root** (not `apps/api/`). Compose loads non-infra knobs via `env_file` and overrides `DATABASE_URL`, `REDIS_URL`, and API `PORT=3000` for containers.
-
-### Verify Compose stack
-
-Optional local DX check (not used by CI):
+Quick verify (expect `{ "status": "ok" }`):
 
 ```bash
-bash scripts/verify-compose.sh
+curl -sf http://localhost:3000/health
 ```
+
+For host/`pnpm` workflows, environment details, migrations, seed, troubleshooting, and full verification, see [Local development](docs/local-development.md).
 
 ## Scripts
 
@@ -81,15 +58,9 @@ packages/
   types/        # @flash-sale/types (non-domain contracts only)
 ```
 
-## Local endpoints
-
-- API liveness: `GET http://localhost:3000/health`
-- GraphQL (dev sandbox): `http://localhost:3000/graphql`
-- Web: `http://localhost:5173`
-
 ## Redis
 
-Redis is non-authoritative: query cache for `flashSale` / `myPurchase` plus IP rate limiting for `purchaseItem`, with fail-open fallback to Postgres. See [docs/redis-caching-strategy.md](docs/redis-caching-strategy.md). In the full Compose stack the API uses `redis://redis:6379` (Compose DNS).
+Redis is non-authoritative: query cache for `flashSale` / `myPurchase` plus IP rate limiting for `purchaseItem`, with fail-open fallback to Postgres. See [docs/redis-caching-strategy.md](docs/redis-caching-strategy.md).
 
 ## E2E
 
@@ -101,12 +72,7 @@ Manual seed (debug only): `pnpm --filter api e2e:seed` (writes repo-root `e2e/se
 
 Commands: `pnpm e2e:smoke` · `pnpm e2e`
 
-If local Redis `:6379` is busy: `REDIS_URL=redis://127.0.0.1:6380`. If API `:3000` is busy:
-
-```bash
-PORT=3001 VITE_API_URL=http://127.0.0.1:3001 pnpm --filter web build
-E2E_API_HEALTH_URL=http://127.0.0.1:3001/health E2E_BASE_URL=http://127.0.0.1:5173 pnpm e2e:smoke
-```
+Port and Redis collisions: see [Local development — Troubleshooting](docs/local-development.md#troubleshooting).
 
 CI uses Option A: `e2e-smoke` and `e2e-full` are both required checks on pull requests.
 
