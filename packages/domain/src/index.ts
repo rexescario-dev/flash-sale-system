@@ -22,6 +22,11 @@ export type { ProductValidationErrorCode } from './product/product.errors.js';
 export { Product } from './product/product.js';
 export type { ProductCreateProps } from './product/product.js';
 export { PurchaseConflictError } from './purchase/purchase-conflict.error.js';
+export { PURCHASE_HISTORY_QUERY } from './purchase/purchase-history.query.js';
+export type {
+  PurchaseHistoryQuery,
+  PurchaseHistoryReadModel,
+} from './purchase/purchase-history.query.js';
 export { PurchaseValidationError } from './purchase/purchase.errors.js';
 export type { PurchaseValidationErrorCode } from './purchase/purchase.errors.js';
 export { PURCHASE_FLOW } from './purchase/purchase.flow.js';

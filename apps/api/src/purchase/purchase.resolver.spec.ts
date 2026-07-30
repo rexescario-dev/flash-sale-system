@@ -7,6 +7,7 @@ import {
   type FlashSaleRepository,
   type ProductId,
   type PurchaseFlow,
+  type PurchaseHistoryQuery,
   type UserId,
 } from '@flash-sale/domain';
 import { ConfigService } from '@nestjs/config';
@@ -25,10 +26,45 @@ const mockReq = {
   socket: { remoteAddress: '203.0.113.10' },
 } as unknown as Request;
 
-describe('PurchaseResolver.myPurchase', () => {
-  const nowUtc = new Date('2026-07-28T12:00:00.000Z');
-  const clock: Clock = { nowUtc: () => nowUtc };
+function stubPurchaseHistoryQuery(
+  partial: Partial<PurchaseHistoryQuery> = {},
+): PurchaseHistoryQuery {
+  return {
+    findByUser: jest.fn().mockResolvedValue([]),
+    ...partial,
+  } as PurchaseHistoryQuery;
+}
 
+const sharedClock: Clock = { nowUtc: () => new Date('2026-07-28T12:00:00.000Z') };
+
+/** Shared factory for query resolvers (myPurchase / myPurchases). */
+function build(
+  flashSales: Partial<FlashSaleRepository>,
+  cache: Partial<MyPurchaseQueryCache> = {},
+  flow: Partial<PurchaseFlow> = {},
+  history: Partial<PurchaseHistoryQuery> = {},
+  clock: Clock = sharedClock,
+) {
+  const config = {
+    get: jest.fn().mockReturnValue(false),
+  } as unknown as ConfigService<AppEnv, true>;
+  const rateLimiter = {
+    consume: jest.fn().mockResolvedValue('allow'),
+  } as unknown as PurchaseItemRateLimiter;
+
+  return new PurchaseResolver(
+    flashSales as FlashSaleRepository,
+    flow as PurchaseFlow,
+    clock,
+    config,
+    { invalidate: jest.fn() } as unknown as FlashSaleQueryCache,
+    cache as MyPurchaseQueryCache,
+    rateLimiter,
+    stubPurchaseHistoryQuery(history),
+  );
+}
+
+describe('PurchaseResolver.myPurchase', () => {
   const sale = FlashSale.reconstitute({
     id: 'sale-1' as FlashSaleId,
     productId: 'product-1' as ProductId,
@@ -37,29 +73,6 @@ describe('PurchaseResolver.myPurchase', () => {
     startsAt: new Date('2026-07-28T10:00:00.000Z'),
     totalStock: 5,
   });
-
-  function build(
-    flashSales: Partial<FlashSaleRepository>,
-    cache: Partial<MyPurchaseQueryCache> = {},
-    flow: Partial<PurchaseFlow> = {},
-  ) {
-    const config = {
-      get: jest.fn().mockReturnValue(false),
-    } as unknown as ConfigService<AppEnv, true>;
-    const rateLimiter = {
-      consume: jest.fn().mockResolvedValue('allow'),
-    } as unknown as PurchaseItemRateLimiter;
-
-    return new PurchaseResolver(
-      flashSales as FlashSaleRepository,
-      flow as PurchaseFlow,
-      clock,
-      config,
-      { invalidate: jest.fn() } as unknown as FlashSaleQueryCache,
-      cache as MyPurchaseQueryCache,
-      rateLimiter,
-    );
-  }
 
   it('sale missing → findById called, cache.get NOT called, FlashSaleNotFoundError', async () => {
     const findById = jest.fn().mockResolvedValue(null);
@@ -171,6 +184,62 @@ describe('PurchaseResolver.myPurchase', () => {
   );
 });
 
+describe('PurchaseResolver.myPurchases', () => {
+  it.each(['', ' ', '\t', '\n', '   '])(
+    'rejects whitespace-only userId %j before history port',
+    async (raw) => {
+      const findByUser = jest.fn();
+      const resolver = build({}, {}, {}, { findByUser });
+
+      await expect(resolver.myPurchases(raw)).rejects.toMatchObject({
+        code: 'BAD_USER_INPUT',
+      });
+      expect(findByUser).not.toHaveBeenCalled();
+    },
+  );
+
+  it('calls history port once with validated userId and maps to PurchaseHistoryItem shape', async () => {
+    const purchasedAt = new Date('2026-07-28T11:00:00.000Z');
+    const findByUser = jest.fn().mockResolvedValue([
+      {
+        flashSaleId: 'sale-1',
+        id: 'purchase-1',
+        product: {
+          id: 'product-1',
+          description: 'A fine widget',
+          name: 'Widget',
+        },
+        purchasedAt,
+      },
+    ]);
+    const resolver = build({}, {}, {}, { findByUser });
+
+    await expect(resolver.myPurchases('user-1')).resolves.toEqual([
+      {
+        id: 'purchase-1',
+        flashSale: { id: 'sale-1' },
+        product: {
+          id: 'product-1',
+          description: 'A fine widget',
+          name: 'Widget',
+        },
+        purchasedAt,
+      },
+    ]);
+    expect(findByUser).toHaveBeenCalledTimes(1);
+    expect(findByUser).toHaveBeenCalledWith('user-1' as UserId);
+  });
+
+  it('returns [] when history port returns []', async () => {
+    const findByUser = jest.fn().mockResolvedValue([]);
+    const resolver = build({}, {}, {}, { findByUser });
+
+    await expect(resolver.myPurchases('user-1')).resolves.toEqual([]);
+    expect(findByUser).toHaveBeenCalledTimes(1);
+    expect(findByUser).toHaveBeenCalledWith('user-1' as UserId);
+  });
+});
+
 describe('PurchaseResolver.purchaseItem', () => {
   const nowUtc = new Date('2026-07-28T12:00:00.000Z');
   const clock: Clock = { nowUtc: () => nowUtc };
@@ -210,6 +279,7 @@ describe('PurchaseResolver.purchaseItem', () => {
           invalidate: myPurchaseInvalidate,
         } as unknown as MyPurchaseQueryCache,
         { consume } as unknown as PurchaseItemRateLimiter,
+        stubPurchaseHistoryQuery(),
       ),
     };
   }
