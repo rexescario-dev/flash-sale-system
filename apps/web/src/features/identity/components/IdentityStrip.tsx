@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 
+import { Button } from '../../../components/ui/Button';
 import { isNonWhitespaceId } from '../../../graphql/id';
 import { formatIdentityStatus } from '../format-identity-status';
 import { useUserIdentity } from '../IdentityProvider';
@@ -74,23 +75,17 @@ export function IdentityStrip() {
             value={draft}
           />
         </label>
-        <button
-          className="rounded bg-emerald-700 px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-50"
+        <Button
           data-testid="identity-save"
           disabled={!isNonWhitespaceId(draft)}
           onClick={onSave}
-          type="button"
+          variant="primary"
         >
           Save
-        </button>
-        <button
-          className="rounded px-3 py-1.5 text-sm font-semibold text-emerald-800"
-          data-testid="identity-cancel"
-          onClick={onCancel}
-          type="button"
-        >
+        </Button>
+        <Button data-testid="identity-cancel" onClick={onCancel} variant="secondary">
           Cancel
-        </button>
+        </Button>
         {showInvalid ? (
           <p className="basis-full text-sm text-red-700" role="alert">
             Enter a non-empty ID.
@@ -106,15 +101,14 @@ export function IdentityStrip() {
         {formatIdentityStatus(userId)}
       </p>
       {userId === null ? (
-        <button
+        <Button
           ref={actionRef}
-          className="rounded bg-emerald-700 px-3 py-1.5 text-sm font-semibold text-white"
           data-testid="identity-identify"
           onClick={beginIdentify}
-          type="button"
+          variant="primary"
         >
           Identify
-        </button>
+        </Button>
       ) : (
         <button
           ref={actionRef}
