@@ -2,7 +2,9 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 import { mutatePurchaseItem } from '../graphql/operations/purchaseItem';
 import { flashSaleQueryKey } from './useFlashSale';
+import { flashSalesQueryKey } from './useFlashSales';
 import { myPurchaseQueryKey } from './useMyPurchase';
+import { myPurchasesQueryKey } from './useMyPurchases';
 
 type PurchaseVariables = {
   flashSaleId: string;
@@ -24,6 +26,12 @@ export function usePurchaseItem() {
       });
       void queryClient.invalidateQueries({
         queryKey: flashSaleQueryKey(variables.flashSaleId),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: flashSalesQueryKey(),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: myPurchasesQueryKey(variables.userId),
       });
     },
   });

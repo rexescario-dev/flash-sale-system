@@ -31,20 +31,20 @@ See **§10 Out of scope**.
 
 ## 3. Locked decisions
 
-| Area             | Decision                                                                                                                                                |
-| ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Approach         | **1** — dedicated query port → read model → resolver maps to GraphQL (no GraphQL field resolvers that hit the DB; port not GraphQL-shaped)              |
-| Cache            | Uncached Postgres read only (mirror `flashSales`). Redis left entirely untouched; #129 owns history cache + SUCCESS invalidation                        |
-| GraphQL shape    | `PurchaseHistoryItem { id, purchasedAt, flashSale, product }` with slim `FlashSaleRef { id }` and reuse of existing `Product`                           |
-| Naming           | History entity = `PurchaseHistoryItem` with `id`. Keep `MyPurchaseResult` / optional `purchaseId` for the per-sale eligibility query                    |
-| Port             | Dedicated `PurchaseHistoryQuery` (CQRS-style read-model query port). `PurchaseRepository` remains aggregate persistence (save / findByFlashSaleAndUser) |
-| Read model       | `PurchaseHistoryReadModel` with `id` (not GraphQL-specific naming)                                                                                      |
-| Mapping          | `PurchaseHistoryReadModel → PurchaseHistoryItem` (GraphQL) at the resolver edge only                                                                    |
-| Index            | `@@index([userId])` on `Purchase` for the canonical history lookup. No composite `(userId, purchasedAt DESC)` unless later measured                     |
-| Ordering         | `purchasedAt DESC`; ordering is defined by the query implementation (no client-controlled sorting)                                                      |
-| Pagination       | None — unfiltered list like `flashSales`                                                                                                                |
-| Identity         | Opaque `userId: ID!`; validate via existing `requireUserId` (empty/whitespace → `BAD_USER_INPUT`; no trim/normalize)                                    |
-| Security framing | Demo-scope discoverability by known `userId` is accepted; UI must not claim private/authenticated history                                               |
+| Area             | Decision                                                                                                                                                                                                       |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Approach         | **1** — dedicated query port → read model → resolver maps to GraphQL (no GraphQL field resolvers that hit the DB; port not GraphQL-shaped)                                                                     |
+| Cache            | Uncached Postgres read only (mirror `flashSales`). Redis left entirely untouched in #125; #129 invalidates client `myPurchases` TanStack Query after purchase — server Redis history cache is a separate issue |
+| GraphQL shape    | `PurchaseHistoryItem { id, purchasedAt, flashSale, product }` with slim `FlashSaleRef { id }` and reuse of existing `Product`                                                                                  |
+| Naming           | History entity = `PurchaseHistoryItem` with `id`. Keep `MyPurchaseResult` / optional `purchaseId` for the per-sale eligibility query                                                                           |
+| Port             | Dedicated `PurchaseHistoryQuery` (CQRS-style read-model query port). `PurchaseRepository` remains aggregate persistence (save / findByFlashSaleAndUser)                                                        |
+| Read model       | `PurchaseHistoryReadModel` with `id` (not GraphQL-specific naming)                                                                                                                                             |
+| Mapping          | `PurchaseHistoryReadModel → PurchaseHistoryItem` (GraphQL) at the resolver edge only                                                                                                                           |
+| Index            | `@@index([userId])` on `Purchase` for the canonical history lookup. No composite `(userId, purchasedAt DESC)` unless later measured                                                                            |
+| Ordering         | `purchasedAt DESC`; ordering is defined by the query implementation (no client-controlled sorting)                                                                                                             |
+| Pagination       | None — unfiltered list like `flashSales`                                                                                                                                                                       |
+| Identity         | Opaque `userId: ID!`; validate via existing `requireUserId` (empty/whitespace → `BAD_USER_INPUT`; no trim/normalize)                                                                                           |
+| Security framing | Demo-scope discoverability by known `userId` is accepted; UI must not claim private/authenticated history                                                                                                      |
 
 ## 4. Architecture
 
@@ -210,7 +210,7 @@ No changes to:
 - `purchaseItem` SUCCESS invalidation set
 - Redis key helpers
 
-**Future extension (#129):** introduce a `myPurchases` cache and invalidate it after successful purchases. #125 intentionally introduces no cache interface or invalidation hooks.
+**Later work:** #129 invalidates the client `myPurchases` TanStack Query key after purchase settlement. Server-side Redis caching for history (if ever desired) is a separate issue — not #129.
 
 ## 8. Errors / security
 
@@ -247,7 +247,7 @@ Prefer existing `graphql-api.integration.spec.ts` patterns plus focused unit/ada
 - AuthN / AuthZ; encrypting or hiding purchases without auth
 - Pagination, filtering, or client-controlled sorting
 - Nesting full mutable `FlashSale` (status, stock, window) on history rows
-- Redis caching or purchase-side invalidation for history (#129)
+- Server-side Redis caching for history (separate issue; #129 is client TanStack Query invalidation only)
 - #126 My Purchases UI / #127 global nav
 - #133 official Tailwind packages / #134 catalog review follow-ups
 - Changing purchase correctness / Redis concurrency contracts (EPIC-02–04)
