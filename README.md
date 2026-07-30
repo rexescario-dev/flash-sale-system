@@ -78,4 +78,4 @@ CI uses Option A: `e2e-smoke` and `e2e-full` are both required checks on pull re
 
 ## Architecture note
 
-Share configuration and intentional contracts. Keep infrastructure local to the consuming app. Modular monolith first.
+Modular monolith: React → GraphQL → NestJS → PostgreSQL + Redis. See [Architecture](docs/architecture.md).
