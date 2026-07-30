@@ -1,5 +1,6 @@
 import type { PurchaseSurfaceProps } from '../purchase-surface';
 
+import { Button } from '../../../components/ui/Button';
 import { IdentityStrip } from '../../identity/components/IdentityStrip';
 import { PurchaseOutcomeBanner } from './PurchaseOutcomeBanner';
 import { RequestErrorBanner } from './RequestErrorBanner';
@@ -48,14 +49,14 @@ export function PurchaseControls({
         </div>
       ) : null}
 
-      <button
-        className="mt-4 w-full rounded bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+      <Button
+        className="mt-4 w-full px-4 py-2.5 disabled:cursor-not-allowed"
         disabled={buyDisabled}
         onClick={onBuy}
-        type="button"
+        variant="primary"
       >
         {buyPending ? 'Buying…' : 'Buy Now'}
-      </button>
+      </Button>
 
       <div className="mt-2 min-h-[1.25rem]" data-testid="buy-helper">
         {!buyPending && helper ? <p className="text-sm text-amber-900/90">{helper}</p> : null}

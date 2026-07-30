@@ -1,3 +1,5 @@
+import { Button } from '../../../components/ui/Button';
+
 type Props = {
   message: string;
   onRetry?: () => void;
@@ -14,13 +16,9 @@ export function RequestErrorBanner({ message, onRetry, title = 'Something went w
       <p className="font-semibold text-red-900">{title}</p>
       <p className="mt-1 text-sm text-red-800">{message}</p>
       {onRetry ? (
-        <button
-          className="mt-3 rounded bg-emerald-700 px-3 py-1.5 text-sm font-semibold text-white"
-          onClick={onRetry}
-          type="button"
-        >
+        <Button className="mt-3" onClick={onRetry} variant="primary">
           Try again
-        </button>
+        </Button>
       ) : null}
     </div>
   );
