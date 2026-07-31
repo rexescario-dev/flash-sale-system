@@ -12,27 +12,41 @@ describe('getScenarioPolicy', () => {
     assert.equal(DUPLICATE_RACE_STOCK, 10);
   });
 
-  it('defines duplicate-race as constant stock, fixed user, no exhaustion expectation', () => {
+  it('defines duplicate-race as constant stock, fixed user, correctness limiter, no exhaustion', () => {
     const policy = getScenarioPolicy('duplicate-race');
+    assert.equal(policy.stockKind, 'constant');
     assert.equal(policy.stockConstant, DUPLICATE_RACE_STOCK);
     assert.equal(policy.fixedUserId, DUPLICATE_RACE_FIXED_USER_ID);
     assert.equal(policy.expectsStockExhaustion, false);
-    assert.ok(typeof policy.fixedUserId === 'string' && policy.fixedUserId.length > 0);
+    assert.equal(policy.expectedLimiterProfile, 'correctness');
   });
 
-  it('defines oversell as exhaustion-expected with no fixed user', () => {
+  it('defines oversell as constrained, exhaustion-expected, correctness limiter, no fixed user', () => {
     const policy = getScenarioPolicy('oversell');
+    assert.equal(policy.stockKind, 'constrained');
     assert.equal(policy.stockConstant, null);
     assert.equal(policy.fixedUserId, null);
     assert.equal(policy.expectsStockExhaustion, true);
+    assert.equal(policy.expectedLimiterProfile, 'correctness');
   });
 
-  it('defines purchase-load / harness / high-volume without fixed user or exhaustion expectation', () => {
-    for (const scenario of ['purchase-load', 'harness-smoke', 'high-volume'] as const) {
+  it('defines purchase-load / harness-smoke as comfortable + correctness', () => {
+    for (const scenario of ['purchase-load', 'harness-smoke'] as const) {
       const policy = getScenarioPolicy(scenario);
+      assert.equal(policy.stockKind, 'comfortable');
       assert.equal(policy.stockConstant, null);
       assert.equal(policy.fixedUserId, null);
       assert.equal(policy.expectsStockExhaustion, false);
+      assert.equal(policy.expectedLimiterProfile, 'correctness');
     }
+  });
+
+  it('defines high-volume as comfortable + performance limiter, no fixed user, no exhaustion', () => {
+    const policy = getScenarioPolicy('high-volume');
+    assert.equal(policy.stockKind, 'comfortable');
+    assert.equal(policy.stockConstant, null);
+    assert.equal(policy.fixedUserId, null);
+    assert.equal(policy.expectsStockExhaustion, false);
+    assert.equal(policy.expectedLimiterProfile, 'performance');
   });
 });
