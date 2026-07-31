@@ -30,51 +30,51 @@ Do **not** invent results narrative docs (`#60` / `#71`) without real runs.
 
 **Thin `high-volume.js` + policy enrichment (Approach 1):**
 
-| Surface                                           | Role after #57                                                                                         |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Surface                                           | Role after #57                                                                                             |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
 | `tests/stress/k6/scenarios/high-volume.js`        | High-volume / performance observation; sibling of `purchase-load.js` / `oversell.js` / `duplicate-race.js` |
-| Scenario policy module                            | SoT gains `stockKind` + `expectedLimiterProfile` (keep existing fields)                                |
-| Public `resolveStock(profile, scenario)`          | Switches on `stockKind`; `high-volume` → comfortable formula (same as `#54`)                           |
-| `pnpm stress:stock`                               | Prints resolved stock including `high-volume`                                                          |
-| `pnpm stress:policy`                              | Generic field reader: `--scenario <s> --field <name>` → single stdout value                            |
-| `scripts/stress-test.sh`                          | Auto-`--stock` for `high-volume` via `stress:stock`                                                    |
-| `scripts/stress-run.sh` + `RUNNABLE_K6_SCENARIOS` | Wire `high-volume`; default `LIMITER_PROFILE` from policy when unset                                   |
-| `tests/stress/seeder/*`                           | Unchanged semantics — explicit `--stock` only; `fixedUserId: null` for high-volume                     |
-| `tests/stress/verifier/*`                         | Existing dual-oracle correctness checks; no new `#57`-only failure conditions                          |
-| `tests/stress/README.md`                          | Thin run docs + performance-limiter prerequisite                                                       |
+| Scenario policy module                            | SoT gains `stockKind` + `expectedLimiterProfile` (keep existing fields)                                    |
+| Public `resolveStock(profile, scenario)`          | Switches on `stockKind`; `high-volume` → comfortable formula (same as `#54`)                               |
+| `pnpm stress:stock`                               | Prints resolved stock including `high-volume`                                                              |
+| `pnpm stress:policy`                              | Generic field reader: `--scenario <s> --field <name>` → single stdout value                                |
+| `scripts/stress-test.sh`                          | Auto-`--stock` for `high-volume` via `stress:stock`                                                        |
+| `scripts/stress-run.sh` + `RUNNABLE_K6_SCENARIOS` | Wire `high-volume`; default `LIMITER_PROFILE` from policy when unset                                       |
+| `tests/stress/seeder/*`                           | Unchanged semantics — explicit `--stock` only; `fixedUserId: null` for high-volume                         |
+| `tests/stress/verifier/*`                         | Existing dual-oracle correctness checks; no new `#57`-only failure conditions                              |
+| `tests/stress/README.md`                          | Thin run docs + performance-limiter prerequisite                                                           |
 
 **Rejected alternatives:**
 
-| Alternative                                      | Why rejected                                                                                          |
-| ------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
-| Extract shared k6 purchase module now            | Touches `#54`–`#56` proofs; defer until multiple scenarios stabilize                                  |
-| Flag/variant on `purchase-load.js`               | Mixes all-success and observation-first contracts; muddies artifacts                                  |
-| New high-volume stock formula                    | Same “inventory must not confound” need as `#54`; extra heuristic with no benefit                     |
-| Constant stock (e.g. 10)                         | Creates inventory contention that obscures limiter / capacity observation                             |
-| `expectsNoSoldOut` boolean                       | Assertion masquerading as config; drifts from stockKind                                               |
-| `rateLimitedRole` field now                      | Speculative; `#57` leaves `RATE_LIMITED` ungated without a second enum                                |
-| Wrapper hardcodes `high-volume → performance`    | Duplicates scenario knowledge outside policy                                                          |
+| Alternative                                   | Why rejected                                                                      |
+| --------------------------------------------- | --------------------------------------------------------------------------------- |
+| Extract shared k6 purchase module now         | Touches `#54`–`#56` proofs; defer until multiple scenarios stabilize              |
+| Flag/variant on `purchase-load.js`            | Mixes all-success and observation-first contracts; muddies artifacts              |
+| New high-volume stock formula                 | Same “inventory must not confound” need as `#54`; extra heuristic with no benefit |
+| Constant stock (e.g. 10)                      | Creates inventory contention that obscures limiter / capacity observation         |
+| `expectsNoSoldOut` boolean                    | Assertion masquerading as config; drifts from stockKind                           |
+| `rateLimitedRole` field now                   | Speculative; `#57` leaves `RATE_LIMITED` ungated without a second enum            |
+| Wrapper hardcodes `high-volume → performance` | Duplicates scenario knowledge outside policy                                      |
 
 ## Locked decisions
 
-| Area                     | Decision                                                                                                                                 |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| Scenario name / script   | `high-volume` → `tests/stress/k6/scenarios/high-volume.js`                                                                               |
-| Approach                 | Thin sibling + policy enrichment (Approach 1)                                                                                            |
-| Stock                    | `stockKind: 'comfortable'` → `comfortableStock(attempts) = max(1000, ceil(attempts * 1.2))` (shared with `#54`)                          |
-| Stock ownership          | `resolveStock` / `stress:stock` before seed; k6/verifier consume seeded stock only                                                       |
-| Users                    | Distinct ids (`{userIdPrefix}-{__ITER}-{__VU}`), same as `#54`                                                                           |
-| Limiter (API)            | Performance profile on API process (`performance.env.example`); k6 does not reconfigure it                                               |
-| Limiter metadata (harness) | `expectedLimiterProfile: 'performance'`; wrappers set **summary metadata** `LIMITER_PROFILE` only                                      |
-| Metadata precedence      | explicit `LIMITER_PROFILE` env → `ScenarioPolicy.expectedLimiterProfile` via `stress:policy` → fallback `correctness`                    |
-| Hard k6 gates            | `unexpected == 0`; `duplicate == 0`; `sold_out == 0` when `stockKind === 'comfortable'`; `0 <= purchase_success <= seededStock`           |
-| Accounting               | `success + sold_out + duplicate + rate_limited + unexpected == attempts` (hard)                                                          |
-| Observational            | `RATE_LIMITED`, `purchase_success` (incl. 0), latency percentiles, RPS — never sole fail reason                                          |
-| Dual oracle              | Existing verifier inventory + uniqueness checks when summary present                                                                     |
-| Policy reader            | Generic `stress:policy --scenario <s> --field <name>`; non-zero on unknown scenario/field                                                |
-| Docs                     | Thin `tests/stress/README.md` only; no invented throughput/latency claims                                                                |
-| Freeze                   | Do not change `#54` / `#55` / `#56` k6 gates, stock formulas, or proofs                                                                  |
-| Out of epic slice        | Shared k6 extraction; `#58`–`#60` narrative; `#134` CSS AC; limiter auto-detection; `rateLimitedRole`                                     |
+| Area                       | Decision                                                                                                                        |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| Scenario name / script     | `high-volume` → `tests/stress/k6/scenarios/high-volume.js`                                                                      |
+| Approach                   | Thin sibling + policy enrichment (Approach 1)                                                                                   |
+| Stock                      | `stockKind: 'comfortable'` → `comfortableStock(attempts) = max(1000, ceil(attempts * 1.2))` (shared with `#54`)                 |
+| Stock ownership            | `resolveStock` / `stress:stock` before seed; k6/verifier consume seeded stock only                                              |
+| Users                      | Distinct ids (`{userIdPrefix}-{__ITER}-{__VU}`), same as `#54`                                                                  |
+| Limiter (API)              | Performance profile on API process (`performance.env.example`); k6 does not reconfigure it                                      |
+| Limiter metadata (harness) | `expectedLimiterProfile: 'performance'`; wrappers set **summary metadata** `LIMITER_PROFILE` only                               |
+| Metadata precedence        | explicit `LIMITER_PROFILE` env → `ScenarioPolicy.expectedLimiterProfile` via `stress:policy` → fallback `correctness`           |
+| Hard k6 gates              | `unexpected == 0`; `duplicate == 0`; `sold_out == 0` when `stockKind === 'comfortable'`; `0 <= purchase_success <= seededStock` |
+| Accounting                 | `success + sold_out + duplicate + rate_limited + unexpected == attempts` (hard)                                                 |
+| Observational              | `RATE_LIMITED`, `purchase_success` (incl. 0), latency percentiles, RPS — never sole fail reason                                 |
+| Dual oracle                | Existing verifier inventory + uniqueness checks when summary present                                                            |
+| Policy reader              | Generic `stress:policy --scenario <s> --field <name>`; non-zero on unknown scenario/field                                       |
+| Docs                       | Thin `tests/stress/README.md` only; no invented throughput/latency claims                                                       |
+| Freeze                     | Do not change `#54` / `#55` / `#56` k6 gates, stock formulas, or proofs                                                         |
+| Out of epic slice          | Shared k6 extraction; `#58`–`#60` narrative; `#134` CSS AC; limiter auto-detection; `rateLimitedRole`                           |
 
 ## Scope
 
@@ -144,13 +144,13 @@ type ScenarioPolicy = {
 };
 ```
 
-| Scenario         | stockKind    | expectedLimiterProfile | Notes                                      |
-| ---------------- | ------------ | ---------------------- | ------------------------------------------ |
-| `purchase-load`  | comfortable  | correctness            | Proofs unchanged                           |
-| `high-volume`    | comfortable  | performance            | Observation-first scenario                 |
-| `oversell`       | constrained  | correctness            | Proofs unchanged                           |
-| `duplicate-race` | constant     | correctness            | `stockConstant = 10`; proofs unchanged     |
-| `harness-smoke`  | comfortable  | correctness            | No `#57` behavioral change required        |
+| Scenario         | stockKind   | expectedLimiterProfile | Notes                                  |
+| ---------------- | ----------- | ---------------------- | -------------------------------------- |
+| `purchase-load`  | comfortable | correctness            | Proofs unchanged                       |
+| `high-volume`    | comfortable | performance            | Observation-first scenario             |
+| `oversell`       | constrained | correctness            | Proofs unchanged                       |
+| `duplicate-race` | constant    | correctness            | `stockConstant = 10`; proofs unchanged |
+| `harness-smoke`  | comfortable | correctness            | No `#57` behavioral change required    |
 
 ### `resolveStock`
 
@@ -220,13 +220,13 @@ Responsibilities:
 
 **Hard gates (N = profile attempts):**
 
-| Gate        | Rule                                                                 |
-| ----------- | -------------------------------------------------------------------- |
-| Unexpected  | `purchase_unexpected == 0`                                           |
-| Duplicate   | `purchase_duplicate == 0`                                            |
-| Sold-out    | `purchase_sold_out == 0` when `stockKind === 'comfortable'`          |
-| Inventory   | `0 <= purchase_success <= seededStock`                               |
-| Accounting  | `success + sold_out + duplicate + rate_limited + unexpected == N`    |
+| Gate       | Rule                                                              |
+| ---------- | ----------------------------------------------------------------- |
+| Unexpected | `purchase_unexpected == 0`                                        |
+| Duplicate  | `purchase_duplicate == 0`                                         |
+| Sold-out   | `purchase_sold_out == 0` when `stockKind === 'comfortable'`       |
+| Inventory  | `0 <= purchase_success <= seededStock`                            |
+| Accounting | `success + sold_out + duplicate + rate_limited + unexpected == N` |
 
 **Derived invariant** (informational — not a separate asserted gate; follows from comfortable stock + hard gates above):
 
@@ -267,14 +267,14 @@ Keep root README thin; do not expand hubs.
 
 ## Relationship to later issues
 
-| Issue   | How #57 relates without overlapping                                              |
-| ------- | -------------------------------------------------------------------------------- |
-| #54     | Unchanged all-success baseline; shares comfortable stock formula                 |
-| #55     | Unchanged oversell / constrained stock                                           |
-| #56     | Unchanged same-user race / constant stock                                        |
-| #58     | May harden metrics schema across scenarios — consume real high-volume artifacts  |
-| #59     | Bottleneck analysis from real `#57` / `full` runs — no invented numbers here     |
-| #60     | Results narrative hub — do not fabricate in `#57`                                |
+| Issue | How #57 relates without overlapping                                             |
+| ----- | ------------------------------------------------------------------------------- |
+| #54   | Unchanged all-success baseline; shares comfortable stock formula                |
+| #55   | Unchanged oversell / constrained stock                                          |
+| #56   | Unchanged same-user race / constant stock                                       |
+| #58   | May harden metrics schema across scenarios — consume real high-volume artifacts |
+| #59   | Bottleneck analysis from real `#57` / `full` runs — no invented numbers here    |
+| #60   | Results narrative hub — do not fabricate in `#57`                               |
 
 ## Design invariants
 
@@ -298,17 +298,17 @@ Keep root README thin; do not expand hubs.
 
 ## Likely file touch list
 
-| Path                                                      | Change                                              |
-| --------------------------------------------------------- | --------------------------------------------------- |
-| `tests/stress/lib/scenario-policy.ts` (+ test)            | `stockKind`, `expectedLimiterProfile`               |
-| `tests/stress/lib/comfortable-stock.ts` (+ test)          | `stockKind` switch; support `high-volume`           |
-| `tests/stress/lib/resolve-comfortable-stock.ts`           | Allow `--scenario=high-volume`                      |
-| `tests/stress/lib/resolve-scenario-policy.ts` (new)       | `stress:policy` CLI                                 |
-| `package.json`                                            | `stress:policy` script                              |
-| `tests/stress/seeder/types.ts`                            | Add `high-volume` to `RUNNABLE_K6_SCENARIOS`        |
-| `scripts/stress-run.sh` / `scripts/stress-test.sh`        | Runnable map; policy-derived `LIMITER_PROFILE`; auto-stock |
-| `tests/stress/k6/scenarios/high-volume.js`                | **Create**                                          |
-| `tests/stress/README.md`                                  | Thin docs                                           |
+| Path                                                | Change                                                     |
+| --------------------------------------------------- | ---------------------------------------------------------- |
+| `tests/stress/lib/scenario-policy.ts` (+ test)      | `stockKind`, `expectedLimiterProfile`                      |
+| `tests/stress/lib/comfortable-stock.ts` (+ test)    | `stockKind` switch; support `high-volume`                  |
+| `tests/stress/lib/resolve-comfortable-stock.ts`     | Allow `--scenario=high-volume`                             |
+| `tests/stress/lib/resolve-scenario-policy.ts` (new) | `stress:policy` CLI                                        |
+| `package.json`                                      | `stress:policy` script                                     |
+| `tests/stress/seeder/types.ts`                      | Add `high-volume` to `RUNNABLE_K6_SCENARIOS`               |
+| `scripts/stress-run.sh` / `scripts/stress-test.sh`  | Runnable map; policy-derived `LIMITER_PROFILE`; auto-stock |
+| `tests/stress/k6/scenarios/high-volume.js`          | **Create**                                                 |
+| `tests/stress/README.md`                            | Thin docs                                                  |
 
 **Expected unchanged:** `#54`/`#55`/`#56` k6 script gates; seeder default-stock semantics; verifier correctness semantics; apps production code; e2e; CI full-scale k6.
 

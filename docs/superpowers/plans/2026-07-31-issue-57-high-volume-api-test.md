@@ -24,29 +24,29 @@
 
 ## File map
 
-| File                                                                              | Responsibility                                                                                          |
-| --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `tests/stress/shared/profiles.json`                                               | Unchanged attempts/VUs SoT                                                                              |
-| `tests/stress/lib/scenario-policy.ts`                                             | Add `stockKind`, `expectedLimiterProfile`; keep existing fields                                         |
-| `tests/stress/lib/scenario-policy.test.ts`                                        | Assert new fields per scenario                                                                          |
-| `tests/stress/lib/comfortable-stock.ts`                                           | `resolveStock` switches on `stockKind`; support `high-volume`                                           |
-| `tests/stress/lib/comfortable-stock.test.ts`                                      | Route `high-volume` → comfortable; stop expecting unsupported                                           |
-| `tests/stress/lib/resolve-comfortable-stock.ts`                                   | Allow `--scenario=high-volume`                                                                          |
-| `tests/stress/lib/resolve-scenario-policy.ts`                                     | **Create** — `stress:policy` CLI                                                                        |
-| `tests/stress/lib/resolve-scenario-policy.test.ts`                                | **Create** — CLI/parser unit tests                                                                      |
-| `package.json`                                                                    | Add `stress:policy` script                                                                              |
-| `tests/stress/seeder/types.ts`                                                    | Add `high-volume` to `RUNNABLE_K6_SCENARIOS`                                                             |
-| `scripts/stress-run.sh`                                                           | Map `high-volume`; default `LIMITER_PROFILE` from `stress:policy` when unset                            |
-| `scripts/stress-test.sh`                                                          | Auto `--stock` for `high-volume`                                                                        |
-| `tests/stress/k6/scenarios/high-volume.js`                                        | **Create** — observation-first scenario + correctness gates + accounting + performance fields in summary |
-| `tests/stress/k6/scenarios/purchase-load.js`                                      | **Do not change**                                                                                       |
-| `tests/stress/k6/scenarios/oversell.js`                                           | **Do not change**                                                                                       |
-| `tests/stress/k6/scenarios/duplicate-race.js`                                     | **Do not change**                                                                                       |
-| `tests/stress/seeder/*`                                                           | **No behavioral change** (high-volume already a `StressScenario`; `fixedUserId` null via policy)        |
-| `tests/stress/verifier/*`                                                         | **No new `#57`-only failure conditions**                                                                |
-| `tests/stress/README.md`                                                          | Thin high-volume docs                                                                                   |
-| `docs/superpowers/specs/2026-07-31-issue-57-high-volume-api-test-design.md`       | Approved design                                                                                         |
-| `docs/superpowers/plans/2026-07-31-issue-57-high-volume-api-test.md`              | This plan                                                                                               |
+| File                                                                        | Responsibility                                                                                           |
+| --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `tests/stress/shared/profiles.json`                                         | Unchanged attempts/VUs SoT                                                                               |
+| `tests/stress/lib/scenario-policy.ts`                                       | Add `stockKind`, `expectedLimiterProfile`; keep existing fields                                          |
+| `tests/stress/lib/scenario-policy.test.ts`                                  | Assert new fields per scenario                                                                           |
+| `tests/stress/lib/comfortable-stock.ts`                                     | `resolveStock` switches on `stockKind`; support `high-volume`                                            |
+| `tests/stress/lib/comfortable-stock.test.ts`                                | Route `high-volume` → comfortable; stop expecting unsupported                                            |
+| `tests/stress/lib/resolve-comfortable-stock.ts`                             | Allow `--scenario=high-volume`                                                                           |
+| `tests/stress/lib/resolve-scenario-policy.ts`                               | **Create** — `stress:policy` CLI                                                                         |
+| `tests/stress/lib/resolve-scenario-policy.test.ts`                          | **Create** — CLI/parser unit tests                                                                       |
+| `package.json`                                                              | Add `stress:policy` script                                                                               |
+| `tests/stress/seeder/types.ts`                                              | Add `high-volume` to `RUNNABLE_K6_SCENARIOS`                                                             |
+| `scripts/stress-run.sh`                                                     | Map `high-volume`; default `LIMITER_PROFILE` from `stress:policy` when unset                             |
+| `scripts/stress-test.sh`                                                    | Auto `--stock` for `high-volume`                                                                         |
+| `tests/stress/k6/scenarios/high-volume.js`                                  | **Create** — observation-first scenario + correctness gates + accounting + performance fields in summary |
+| `tests/stress/k6/scenarios/purchase-load.js`                                | **Do not change**                                                                                        |
+| `tests/stress/k6/scenarios/oversell.js`                                     | **Do not change**                                                                                        |
+| `tests/stress/k6/scenarios/duplicate-race.js`                               | **Do not change**                                                                                        |
+| `tests/stress/seeder/*`                                                     | **No behavioral change** (high-volume already a `StressScenario`; `fixedUserId` null via policy)         |
+| `tests/stress/verifier/*`                                                   | **No new `#57`-only failure conditions**                                                                 |
+| `tests/stress/README.md`                                                    | Thin high-volume docs                                                                                    |
+| `docs/superpowers/specs/2026-07-31-issue-57-high-volume-api-test-design.md` | Approved design                                                                                          |
+| `docs/superpowers/plans/2026-07-31-issue-57-high-volume-api-test.md`        | This plan                                                                                                |
 
 **Expected unchanged:** root `README.md`, `docs/testing-strategy.md`, seeder default stock semantics (`1000`), `comfortableStock` / `constrainedStock` formulas, `#54`/`#55`/`#56` k6 gates, apps production code, e2e, CI, `#58`–`#60` bodies, `#134` CSS AC. Do not invent results docs (`#71`/`#60`). Do **not** add `rateLimitedRole`. Do **not** extract shared k6 purchase module.
 
@@ -247,11 +247,7 @@ In `tests/stress/lib/comfortable-stock.ts`:
 - Route by `policy.stockKind` (formulas remain separate helpers)
 
 ```ts
-export type StockPolicyScenario =
-  | 'duplicate-race'
-  | 'oversell'
-  | 'purchase-load'
-  | 'high-volume';
+export type StockPolicyScenario = 'duplicate-race' | 'oversell' | 'purchase-load' | 'high-volume';
 
 export function resolveStock(profileName: string, scenario: string): number {
   const profiles = loadProfiles();
@@ -341,11 +337,7 @@ Create `tests/stress/lib/resolve-scenario-policy.test.ts` testing pure helpers e
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import {
-  POLICY_FIELDS,
-  parsePolicyArgs,
-  resolvePolicyField,
-} from './resolve-scenario-policy';
+import { POLICY_FIELDS, parsePolicyArgs, resolvePolicyField } from './resolve-scenario-policy';
 
 describe('resolvePolicyField', () => {
   it('returns expectedLimiterProfile for high-volume', () => {
@@ -362,17 +354,23 @@ describe('resolvePolicyField', () => {
 
   it('rejects unknown field / scenario', () => {
     assert.throws(() => resolvePolicyField('high-volume', 'notAField'), /Unknown field/);
-    assert.throws(() => resolvePolicyField('nope', 'stockKind'), /Unsupported scenario|Unknown scenario/);
+    assert.throws(
+      () => resolvePolicyField('nope', 'stockKind'),
+      /Unsupported scenario|Unknown scenario/,
+    );
   });
 });
 
 describe('parsePolicyArgs', () => {
   it('parses --scenario and --field', () => {
-    assert.deepEqual(parsePolicyArgs(['--scenario=high-volume', '--field=expectedLimiterProfile']), {
-      help: false,
-      scenario: 'high-volume',
-      field: 'expectedLimiterProfile',
-    });
+    assert.deepEqual(
+      parsePolicyArgs(['--scenario=high-volume', '--field=expectedLimiterProfile']),
+      {
+        help: false,
+        scenario: 'high-volume',
+        field: 'expectedLimiterProfile',
+      },
+    );
   });
 
   it('requires both flags', () => {
@@ -499,8 +497,7 @@ Prints a single policy field value on stdout.
 
 try {
   // Only run CLI side effects when executed directly (not when imported by tests).
-  const isMain =
-    typeof require !== 'undefined' && require.main === module; // may be false under tsx ESM
+  const isMain = typeof require !== 'undefined' && require.main === module; // may be false under tsx ESM
   // Prefer import.meta / argv check used elsewhere — mirror resolve-comfortable-stock.ts style:
 } catch {
   // implemented below without require.main — always use argv entry like stock CLI
@@ -772,9 +769,7 @@ export function handleSummary(data) {
     performance,
     warnings: accountingOk
       ? []
-      : [
-          `Accounting mismatch: classifiedTotal=${classifiedTotal} attempts=${attempts}`,
-        ],
+      : [`Accounting mismatch: classifiedTotal=${classifiedTotal} attempts=${attempts}`],
   };
 
   const json = JSON.stringify(summary, null, 2);
@@ -820,7 +815,7 @@ Update `tests/stress/README.md`:
 1. Add row to runnable scenarios table:
 
 ```markdown
-| `high-volume`    | #57   | Observation-first capacity/latency (performance limiter; `RATE_LIMITED` allowed) |
+| `high-volume` | #57 | Observation-first capacity/latency (performance limiter; `RATE_LIMITED` allowed) |
 ```
 
 2. Remove or revise the “Other scenario names… until #57” sentence (high-volume is now runnable).
@@ -835,7 +830,7 @@ pnpm stress:test -- --scenario high-volume --profile smoke
 4. Stock table — add:
 
 ```markdown
-| `high-volume`    | `max(1000, ceil(attempts * 1.2))` (same as purchase-load) | 1000 / 1200 / 12000 |
+| `high-volume` | `max(1000, ceil(attempts * 1.2))` (same as purchase-load) | 1000 / 1200 / 12000 |
 ```
 
 5. Prerequisites / notes:

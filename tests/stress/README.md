@@ -16,12 +16,12 @@ Privileged Prisma seed → k6 GraphQL `purchaseItem` → Prisma verify.
 
 ## Runnable scenarios
 
-| Scenario         | Issue | Notes                                                             |
-| ---------------- | ----- | ----------------------------------------------------------------- |
-| `harness-smoke`  | #53   | Harness proof; comfortable default seed stock is fine for `smoke` |
-| `purchase-load`  | #54   | Baseline concurrent purchase load (strict all-success)            |
-| `oversell`       | #55   | Limited inventory / oversell (`0 < purchase_success <= stock`)    |
-| `duplicate-race` | #56   | Same-user race (`SUCCESS=1`, `DUPLICATE=N-1`)                     |
+| Scenario         | Issue | Notes                                                                            |
+| ---------------- | ----- | -------------------------------------------------------------------------------- |
+| `harness-smoke`  | #53   | Harness proof; comfortable default seed stock is fine for `smoke`                |
+| `purchase-load`  | #54   | Baseline concurrent purchase load (strict all-success)                           |
+| `oversell`       | #55   | Limited inventory / oversell (`0 < purchase_success <= stock`)                   |
+| `duplicate-race` | #56   | Same-user race (`SUCCESS=1`, `DUPLICATE=N-1`)                                    |
 | `high-volume`    | #57   | Observation-first capacity/latency (performance limiter; `RATE_LIMITED` allowed) |
 
 ## Commands (repo root)
@@ -46,12 +46,12 @@ pnpm stress:test -- --scenario high-volume --profile smoke
 
 Stock policy via shared profiles + `resolveStock(profile, scenario)`:
 
-| Scenario         | Formula (internal)                          | smoke / standard / full |
-| ---------------- | ------------------------------------------- | ----------------------- |
-| `purchase-load`  | `max(1000, ceil(attempts * 1.2))`           | 1000 / 1200 / 12000     |
-| `high-volume`    | `max(1000, ceil(attempts * 1.2))` (same as purchase-load) | 1000 / 1200 / 12000 |
-| `oversell`       | `min(100, max(10, floor(attempts * 0.10)))` | 10 / 100 / 100          |
-| `duplicate-race` | constant `10` (profile-independent)         | 10 / 10 / 10            |
+| Scenario         | Formula (internal)                                        | smoke / standard / full |
+| ---------------- | --------------------------------------------------------- | ----------------------- |
+| `purchase-load`  | `max(1000, ceil(attempts * 1.2))`                         | 1000 / 1200 / 12000     |
+| `high-volume`    | `max(1000, ceil(attempts * 1.2))` (same as purchase-load) | 1000 / 1200 / 12000     |
+| `oversell`       | `min(100, max(10, floor(attempts * 0.10)))`               | 10 / 100 / 100          |
+| `duplicate-race` | constant `10` (profile-independent)                       | 10 / 10 / 10            |
 
 ### Split path
 
