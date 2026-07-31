@@ -54,6 +54,7 @@ Additional read operations (`myPurchase`, `myPurchases`) follow the same archite
 - [Concurrency model](concurrency-model.md)
 - [Fault tolerance strategy](fault-tolerance-strategy.md)
 - [Local development](local-development.md)
+- [Playwright E2E](playwright-e2e.md)
 - [Purchase sequence](purchase-sequence.md)
 - [Redis caching & rate-limit strategy](redis-caching-strategy.md)
 - [Scalability strategy](scalability-strategy.md)

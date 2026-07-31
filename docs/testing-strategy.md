@@ -74,7 +74,7 @@ pnpm --filter api test:integration
 pnpm e2e
 ```
 
-**Lifecycle (strategy level):** Real stack. Playwright `globalSetup` owns deterministic seeding for the suite. Operational runbooks and troubleshooting belong to Issue #69.
+**Lifecycle (strategy level):** Real stack. Playwright `globalSetup` owns deterministic seeding for the suite. Operational execution, debugging, and troubleshooting are documented in [Playwright E2E](playwright-e2e.md).
 
 **CI role:** Full Playwright regression provides comprehensive end-to-end coverage as part of the project's automated validation.
 
@@ -114,11 +114,11 @@ This mapping describes layer participation, not workflow YAML, job names, or bra
 
 - [System architecture](architecture.md)
 - [Local development](local-development.md)
+- [Playwright E2E](playwright-e2e.md)
 - [Concurrency model](concurrency-model.md)
 - [Redis caching & rate-limit strategy](redis-caching-strategy.md)
 
 **Planned work:**
 
-- Issue #69 — Playwright execution guide
 - Issue #70 — Smoke testing guide
 - Issue #71 — Stress testing (k6)

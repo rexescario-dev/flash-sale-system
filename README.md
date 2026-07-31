@@ -94,17 +94,18 @@ Redis is non-authoritative: query cache for `flashSale` / `myPurchase` plus IP r
 
 ## E2E
 
-Lifecycle: Postgres/Redis healthy → migrate → start API + web → Playwright `globalSetup` (readiness + `pnpm --filter api e2e:seed`) → tests.
+Real-stack Playwright suite under `e2e/` (smoke + regression). Canonical seed ownership is Playwright `globalSetup` — do not pre-seed in CI.
 
-Canonical seed ownership is Playwright `globalSetup`. Do not pre-seed in CI.
+```bash
+pnpm e2e:smoke
+pnpm e2e
+```
 
-Manual seed (debug only): `pnpm --filter api e2e:seed` (writes repo-root `e2e/seed-state.json`; override with `E2E_SEED_STATE_PATH`).
-
-Commands: `pnpm e2e:smoke` · `pnpm e2e`
+Full prerequisites, lifecycle, environment variables, project filters, headed/debug modes, traces, CI jobs, and troubleshooting: [Playwright E2E](docs/playwright-e2e.md).
 
 Port and Redis collisions: see [Local development — Troubleshooting](docs/local-development.md#troubleshooting).
 
-CI uses Option A: `e2e-smoke` and `e2e-full` are both required checks on pull requests.
+CI runs `e2e-smoke` and `e2e-full` as required checks on pull requests.
 
 ## Architecture note
 

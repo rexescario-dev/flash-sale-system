@@ -116,7 +116,7 @@ Use the existing API Prisma scripts:
 
 `pnpm --filter api e2e:seed` is for **E2E/debug only** (writes repo-root `e2e/seed-state.json`; override with `E2E_SEED_STATE_PATH`). It is not part of normal local startup.
 
-For real-stack E2E, Playwright `globalSetup` owns seeding (readiness check + `pnpm --filter api e2e:seed`). See the README [E2E](../README.md#e2e) section for lifecycle and CI notes.
+For real-stack E2E, Playwright `globalSetup` owns seeding (readiness check + `pnpm --filter api e2e:seed`). See [Playwright E2E](playwright-e2e.md) for lifecycle, commands, and CI notes.
 
 ### Reset (Compose)
 
@@ -172,7 +172,7 @@ PORT=3001 VITE_API_URL=http://127.0.0.1:3001 pnpm --filter web build
 E2E_API_HEALTH_URL=http://127.0.0.1:3001/health E2E_BASE_URL=http://127.0.0.1:5173 pnpm e2e:smoke
 ```
 
-For E2E lifecycle, seed ownership, and CI requirements, see [README — E2E](../README.md#e2e).
+For E2E lifecycle, seed ownership, and CI behavior, see [Playwright E2E](playwright-e2e.md).
 
 ## Common tasks
 
