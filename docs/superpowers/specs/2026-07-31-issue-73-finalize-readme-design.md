@@ -16,17 +16,17 @@ Make `README.md` the canonical reviewer entry point by making every #73 AC topic
 
 **AC interpretation (“includes” = discoverable):** each topic is either short intentional README prose (where no dedicated hub exists) or a clear link to an existing hub. The README does not become a second copy of `docs/*` bodies.
 
-| AC topic     | Satisfied by                                                                                                                          |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Overview     | Top-level README `## Overview`                                                                                                        |
-| Features     | Top-level README `## Features` (3–7 bullets)                                                                                          |
-| Architecture | Documentation index → [`docs/architecture.md`](../../architecture.md)                                                                 |
-| Concurrency  | Documentation index → [`docs/concurrency-model.md`](../../concurrency-model.md)                                                       |
-| Redis        | Documentation index → [`docs/redis-caching-strategy.md`](../../redis-caching-strategy.md)                                             |
-| API          | Thin `## API` (GraphQL/API endpoints + architecture pointer)                                                                          |
-| Setup        | Try the app + Quick Start + Documentation index → [`docs/local-development.md`](../../local-development.md)                           |
-| Testing      | Scripts + thin `## E2E` + Documentation index → [`docs/testing-strategy.md`](../../testing-strategy.md)                                |
-| Trade-offs   | Documentation index → [`docs/technology-trade-offs.md`](../../technology-trade-offs.md)                                               |
+| AC topic     | Satisfied by                                                                                                                                             |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Overview     | Top-level README `## Overview`                                                                                                                           |
+| Features     | Top-level README `## Features` (3–7 bullets)                                                                                                             |
+| Architecture | Documentation index → [`docs/architecture.md`](../../architecture.md)                                                                                    |
+| Concurrency  | Documentation index → [`docs/concurrency-model.md`](../../concurrency-model.md)                                                                          |
+| Redis        | Documentation index → [`docs/redis-caching-strategy.md`](../../redis-caching-strategy.md)                                                                |
+| API          | Thin `## API` (GraphQL/API endpoints + architecture pointer)                                                                                             |
+| Setup        | Try the app + Quick Start + Documentation index → [`docs/local-development.md`](../../local-development.md)                                              |
+| Testing      | Scripts + thin `## E2E` + Documentation index → [`docs/testing-strategy.md`](../../testing-strategy.md)                                                  |
+| Trade-offs   | Documentation index → [`docs/technology-trade-offs.md`](../../technology-trade-offs.md)                                                                  |
 | Future work  | Documentation index → [`docs/technology-trade-offs.md#future-evolution`](../../technology-trade-offs.md#future-evolution) + k6 mentioned only as planned |
 
 ## Approach
@@ -72,20 +72,20 @@ Make `README.md` the canonical reviewer entry point by making every #73 AC topic
 
 ## Ownership model
 
-| Concern                                         | Canonical owner                          |
-| ----------------------------------------------- | ---------------------------------------- |
-| Product identity / first-run onboarding         | `README.md`                              |
-| Architecture diagram & related-doc index        | `docs/architecture.md`                   |
+| Concern                                           | Canonical owner                                           |
+| ------------------------------------------------- | --------------------------------------------------------- |
+| Product identity / first-run onboarding           | `README.md`                                               |
+| Architecture diagram & related-doc index          | `docs/architecture.md`                                    |
 | Purchase sequence / scalability / fault tolerance | Linked from architecture (not README Documentation index) |
-| Concurrency                                     | `docs/concurrency-model.md`              |
-| Redis strategy                                  | `docs/redis-caching-strategy.md`         |
-| Local setup details                             | `docs/local-development.md`              |
-| Testing philosophy / layers                     | `docs/testing-strategy.md`               |
-| Playwright how-to                               | `docs/playwright-e2e.md` (via README E2E) |
-| Smoke suite implementation                      | `docs/smoke-testing.md` (via README E2E) |
-| Technology trade-offs + future evolution        | `docs/technology-trade-offs.md`          |
-| k6 / stress                                     | #71 / EPIC-07 (planned)                  |
-| Screenshots                                     | #72                                      |
+| Concurrency                                       | `docs/concurrency-model.md`                               |
+| Redis strategy                                    | `docs/redis-caching-strategy.md`                          |
+| Local setup details                               | `docs/local-development.md`                               |
+| Testing philosophy / layers                       | `docs/testing-strategy.md`                                |
+| Playwright how-to                                 | `docs/playwright-e2e.md` (via README E2E)                 |
+| Smoke suite implementation                        | `docs/smoke-testing.md` (via README E2E)                  |
+| Technology trade-offs + future evolution          | `docs/technology-trade-offs.md`                           |
+| k6 / stress                                       | #71 / EPIC-07 (planned)                                   |
+| Screenshots                                       | #72                                                       |
 
 **Conflict rule:** Do not restate hub bodies in README. Prefer one outbound path per concern unless context differs (E2E commands vs Testing strategy link).
 
@@ -108,15 +108,15 @@ Make `README.md` the canonical reviewer entry point by making every #73 AC topic
 9. `## API` — GraphQL/API endpoints + pointer to `docs/architecture.md` (no schema dump; no `docs/api.md`)
 10. `## Documentation` — AC-minimal link list only:
 
-| Label        | Target                                              |
-| ------------ | --------------------------------------------------- |
-| Architecture | `docs/architecture.md`                              |
-| Concurrency  | `docs/concurrency-model.md`                         |
-| Redis        | `docs/redis-caching-strategy.md`                    |
-| Setup        | `docs/local-development.md`                         |
-| Testing      | `docs/testing-strategy.md`                          |
-| Trade-offs   | `docs/technology-trade-offs.md`                     |
-| Future work  | `docs/technology-trade-offs.md#future-evolution`    |
+| Label        | Target                                           |
+| ------------ | ------------------------------------------------ |
+| Architecture | `docs/architecture.md`                           |
+| Concurrency  | `docs/concurrency-model.md`                      |
+| Redis        | `docs/redis-caching-strategy.md`                 |
+| Setup        | `docs/local-development.md`                      |
+| Testing      | `docs/testing-strategy.md`                       |
+| Trade-offs   | `docs/technology-trade-offs.md`                  |
+| Future work  | `docs/technology-trade-offs.md#future-evolution` |
 
 ### Removals / folds
 
@@ -140,34 +140,43 @@ Make `README.md` the canonical reviewer entry point by making every #73 AC topic
 Short intro (current stack; k6 labeled planned).
 
 ## Overview
+
 ...
 
 ## Features
+
 - ...
 - Future scalability validation may include k6 load testing
 
 ## Try the app
+
 ...
 
 ## Quick Start
+
 ...
 
 ## Scripts
+
 ...
 
 ## Workspace layout
+
 ...
 
 ## E2E
+
 - `pnpm e2e:smoke`
 - `pnpm e2e`
 - docs/playwright-e2e.md
 - docs/smoke-testing.md
 
 ## API
+
 GraphQL endpoints + architecture pointer
 
 ## Documentation
+
 - Architecture → docs/architecture.md
 - Concurrency → docs/concurrency-model.md
 - Redis → docs/redis-caching-strategy.md
@@ -179,15 +188,15 @@ GraphQL endpoints + architecture pointer
 
 ## Boundary with siblings
 
-| Doc / issue                 | Owns                                              |
-| --------------------------- | ------------------------------------------------- |
-| #61–#70 hubs                | Canonical technical documentation                 |
-| #73 Finalize README         | Thin entry point + AC discoverability map         |
-| #72 Screenshots             | Visual assets after README structure is stable    |
-| #71 / EPIC-07               | k6 stress strategy and results                    |
-| #74 Release readiness       | Blocked on EPIC-07                                |
-| Architecture Related docs   | Purchase sequence, scalability, fault tolerance   |
-| README `## E2E`             | Playwright + smoke operational discovery          |
+| Doc / issue               | Owns                                            |
+| ------------------------- | ----------------------------------------------- |
+| #61–#70 hubs              | Canonical technical documentation               |
+| #73 Finalize README       | Thin entry point + AC discoverability map       |
+| #72 Screenshots           | Visual assets after README structure is stable  |
+| #71 / EPIC-07             | k6 stress strategy and results                  |
+| #74 Release readiness     | Blocked on EPIC-07                              |
+| Architecture Related docs | Purchase sequence, scalability, fault tolerance |
+| README `## E2E`           | Playwright + smoke operational discovery        |
 
 ## Out of scope
 

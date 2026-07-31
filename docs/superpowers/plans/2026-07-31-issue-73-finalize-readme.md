@@ -18,11 +18,11 @@
 
 ## File map
 
-| File                                                                   | Responsibility                                                                                         |
-| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `README.md`                                                            | **Modify** — finalize thin entry point per approved design                                             |
-| `docs/superpowers/specs/2026-07-31-issue-73-finalize-readme-design.md` | Already written (editorial polish applied); update only if implementation reveals an inconsistency     |
-| `docs/superpowers/plans/2026-07-31-issue-73-finalize-readme.md`        | This plan                                                                                              |
+| File                                                                   | Responsibility                                                                                     |
+| ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `README.md`                                                            | **Modify** — finalize thin entry point per approved design                                         |
+| `docs/superpowers/specs/2026-07-31-issue-73-finalize-readme-design.md` | Already written (editorial polish applied); update only if implementation reveals an inconsistency |
+| `docs/superpowers/plans/2026-07-31-issue-73-finalize-readme.md`        | This plan                                                                                          |
 
 **Expected unchanged:** all `docs/*.md` hubs (`architecture`, `concurrency-model`, `redis-caching-strategy`, `local-development`, `testing-strategy`, `playwright-e2e`, `smoke-testing`, `technology-trade-offs`, `purchase-sequence`, `scalability-strategy`, `fault-tolerance-strategy`), `apps/**`, `packages/**`, `e2e/**`, Compose, CI workflows, package scripts.
 
