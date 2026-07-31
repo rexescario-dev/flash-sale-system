@@ -41,7 +41,7 @@ This document does not cover:
 
 - High-availability design (replicas, failover, multi-AZ, or managed HA services)
 - Operational runbooks (Issues #69 / #70)
-- Architectural rationale, alternatives, or trade-off essays (Issue #66)
+- Architectural rationale, alternatives, or trade-off essays ([Technology trade-offs](technology-trade-offs.md))
 - Re-documenting Redis strategy, concurrency model, purchase sequence, scalability strategy, or testing documentation
 - README expansion or documentation hub work (#73)
 - Application timeout, retry, or circuit-breaker policies that are not implemented today
@@ -51,11 +51,8 @@ This document does not cover:
 
 - [System architecture](architecture.md)
 - [Scalability strategy](scalability-strategy.md)
+- [Technology trade-offs](technology-trade-offs.md)
 - [Redis caching & rate-limit strategy](redis-caching-strategy.md)
 - [Concurrency model](concurrency-model.md)
 - [Purchase sequence](purchase-sequence.md)
 - [Local development](local-development.md)
-
-**Planned work**
-
-- Issue #66 — Technology / architecture trade-offs
