@@ -147,10 +147,15 @@ function main(argv: string[]): number {
   return 0;
 }
 
-try {
-  process.exitCode = main(process.argv.slice(2));
-} catch (err) {
-  const message = err instanceof Error ? err.message : String(err);
-  process.stderr.write(`stress:report error: ${message}\n`);
-  process.exitCode = 1;
+const scriptPath = process.argv[1] ?? '';
+const isDirect = scriptPath.endsWith('cli.ts') || scriptPath.endsWith('reporter/cli.ts');
+
+if (isDirect) {
+  try {
+    process.exitCode = main(process.argv.slice(2));
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    process.stderr.write(`stress:report error: ${message}\n`);
+    process.exitCode = 1;
+  }
 }
