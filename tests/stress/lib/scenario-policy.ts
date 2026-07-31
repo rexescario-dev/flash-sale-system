@@ -3,15 +3,15 @@ import type { StressScenario } from '../seeder/types';
 export const DUPLICATE_RACE_STOCK = 10;
 export const DUPLICATE_RACE_FIXED_USER_ID = 'stress-user-duplicate-race';
 
-export type StockKind = 'comfortable' | 'constrained' | 'constant';
+export type StockKind = 'comfortable' | 'constant' | 'constrained';
 export type LimiterProfile = 'correctness' | 'performance';
 
 export type ScenarioPolicy = {
   fixedUserId: null | string;
+  expectedLimiterProfile: LimiterProfile;
   expectsStockExhaustion: boolean;
   stockConstant: null | number;
   stockKind: StockKind;
-  expectedLimiterProfile: LimiterProfile;
 };
 
 export function getScenarioPolicy(scenario: StressScenario): ScenarioPolicy {
@@ -19,35 +19,35 @@ export function getScenarioPolicy(scenario: StressScenario): ScenarioPolicy {
     case 'duplicate-race':
       return {
         fixedUserId: DUPLICATE_RACE_FIXED_USER_ID,
+        expectedLimiterProfile: 'correctness',
         expectsStockExhaustion: false,
         stockConstant: DUPLICATE_RACE_STOCK,
         stockKind: 'constant',
-        expectedLimiterProfile: 'correctness',
       };
     case 'oversell':
       return {
         fixedUserId: null,
+        expectedLimiterProfile: 'correctness',
         expectsStockExhaustion: true,
         stockConstant: null,
         stockKind: 'constrained',
-        expectedLimiterProfile: 'correctness',
       };
     case 'high-volume':
       return {
         fixedUserId: null,
+        expectedLimiterProfile: 'performance',
         expectsStockExhaustion: false,
         stockConstant: null,
         stockKind: 'comfortable',
-        expectedLimiterProfile: 'performance',
       };
     case 'harness-smoke':
     case 'purchase-load':
       return {
         fixedUserId: null,
+        expectedLimiterProfile: 'correctness',
         expectsStockExhaustion: false,
         stockConstant: null,
         stockKind: 'comfortable',
-        expectedLimiterProfile: 'correctness',
       };
   }
 }

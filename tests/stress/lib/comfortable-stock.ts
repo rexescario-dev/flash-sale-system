@@ -10,11 +10,7 @@ export const CONSTRAINED_STOCK_RATIO = 0.1;
 export const CONSTRAINED_STOCK_MIN = 10;
 export const CONSTRAINED_STOCK_MAX = 100;
 
-export type StockPolicyScenario =
-  | 'duplicate-race'
-  | 'oversell'
-  | 'purchase-load'
-  | 'high-volume';
+export type StockPolicyScenario = 'duplicate-race' | 'high-volume' | 'oversell' | 'purchase-load';
 
 type Profile = {
   attempts: number;

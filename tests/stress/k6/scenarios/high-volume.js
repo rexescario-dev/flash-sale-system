@@ -29,9 +29,9 @@ export const options = {
     // purchase_rate_limited intentionally ungated — capacity signal.
     purchase_duplicate: ['count==0'],
     purchase_sold_out: ['count==0'],
-    purchase_unexpected: ['count==0'],
     // 0 <= success <= seededStock (k6 count is always >= 0)
     purchase_success: [`count<=${seededStock}`],
+    purchase_unexpected: ['count==0'],
   },
 };
 
@@ -92,10 +92,10 @@ export function handleSummary(data) {
 
   const performance = {
     http_req_duration_ms: {
+      avg: metricValue(data, 'http_req_duration', 'avg'),
       p50: metricValue(data, 'http_req_duration', 'p(50)'),
       p95: metricValue(data, 'http_req_duration', 'p(95)'),
       p99: metricValue(data, 'http_req_duration', 'p(99)'),
-      avg: metricValue(data, 'http_req_duration', 'avg'),
     },
     http_reqs: {
       count: metricValue(data, 'http_reqs', 'count'),
@@ -108,14 +108,12 @@ export function handleSummary(data) {
     accountingOk,
     attempts,
     classifiedTotal,
+    performance,
     purchaseSuccess,
     stock: seededStock,
-    performance,
     warnings: accountingOk
       ? []
-      : [
-          `Accounting mismatch: classifiedTotal=${classifiedTotal} attempts=${attempts}`,
-        ],
+      : [`Accounting mismatch: classifiedTotal=${classifiedTotal} attempts=${attempts}`],
   };
 
   const json = JSON.stringify(summary, null, 2);

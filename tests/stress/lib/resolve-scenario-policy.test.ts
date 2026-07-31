@@ -1,11 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import {
-  POLICY_FIELDS,
-  parsePolicyArgs,
-  resolvePolicyField,
-} from './resolve-scenario-policy';
+import { parsePolicyArgs, POLICY_FIELDS, resolvePolicyField } from './resolve-scenario-policy';
 
 describe('resolvePolicyField', () => {
   it('returns expectedLimiterProfile for high-volume', () => {
@@ -22,17 +18,23 @@ describe('resolvePolicyField', () => {
 
   it('rejects unknown field / scenario', () => {
     assert.throws(() => resolvePolicyField('high-volume', 'notAField'), /Unknown field/);
-    assert.throws(() => resolvePolicyField('nope', 'stockKind'), /Unsupported scenario|Unknown scenario/);
+    assert.throws(
+      () => resolvePolicyField('nope', 'stockKind'),
+      /Unsupported scenario|Unknown scenario/,
+    );
   });
 });
 
 describe('parsePolicyArgs', () => {
   it('parses --scenario and --field', () => {
-    assert.deepEqual(parsePolicyArgs(['--scenario=high-volume', '--field=expectedLimiterProfile']), {
-      help: false,
-      scenario: 'high-volume',
-      field: 'expectedLimiterProfile',
-    });
+    assert.deepEqual(
+      parsePolicyArgs(['--scenario=high-volume', '--field=expectedLimiterProfile']),
+      {
+        field: 'expectedLimiterProfile',
+        help: false,
+        scenario: 'high-volume',
+      },
+    );
   });
 
   it('requires both flags', () => {

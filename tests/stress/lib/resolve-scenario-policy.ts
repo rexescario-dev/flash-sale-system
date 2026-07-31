@@ -43,9 +43,9 @@ function requireFlagValue(flag: string, value: string | undefined): string {
 }
 
 export function parsePolicyArgs(argv: string[]): {
+  field: string;
   help: boolean;
   scenario: string;
-  field: string;
 } {
   let help = false;
   let scenario: string | undefined;
@@ -78,11 +78,11 @@ export function parsePolicyArgs(argv: string[]): {
   }
 
   if (help) {
-    return { help: true, scenario: 'high-volume', field: 'expectedLimiterProfile' };
+    return { field: 'expectedLimiterProfile', help: true, scenario: 'high-volume' };
   }
   if (!scenario) throw new Error('Missing --scenario');
   if (!field) throw new Error('Missing --field');
-  return { help: false, scenario, field };
+  return { field, help: false, scenario };
 }
 
 function printHelp(): void {
