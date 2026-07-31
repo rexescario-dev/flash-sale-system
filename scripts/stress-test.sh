@@ -56,10 +56,10 @@ Runs stress:seed → stress:run → stress:verify with scenario-appropriate flag
 Options:
   --scenario <name>   Stress scenario (default: harness-smoke)
   --profile <name>    Intensity profile (default: smoke)
-  --stock <n>         Seed stock override (purchase-load only; auto-resolved when omitted)
+  --stock <n>         Seed stock override (purchase-load / oversell; auto-resolved when omitted)
 
-For purchase-load without --stock, comfortable stock is resolved from the profile
-and passed to stress:seed only (not forwarded to stress:run or stress:verify).
+For purchase-load and oversell without --stock, stock is resolved from the profile
+and scenario and passed to stress:seed only (not forwarded to stress:run or stress:verify).
 EOF
       exit 0
       ;;
@@ -71,11 +71,11 @@ EOF
   i=$((i + 1))
 done
 
-if [[ "$SCENARIO" == "purchase-load" && "$HAS_STOCK" -eq 0 ]]; then
+if [[ ( "$SCENARIO" == "purchase-load" || "$SCENARIO" == "oversell" ) && "$HAS_STOCK" -eq 0 ]]; then
   # --silent: pnpm otherwise prints script banners to stdout and breaks integer capture.
-  STOCK_VALUE="$(pnpm --silent stress:stock "$PROFILE")"
+  STOCK_VALUE="$(pnpm --silent stress:stock --profile="$PROFILE" --scenario="$SCENARIO")"
   HAS_STOCK=1
-  echo "stress:test: purchase-load comfortable stock=$STOCK_VALUE (profile=$PROFILE)"
+  echo "stress:test: ${SCENARIO} stock=$STOCK_VALUE (profile=$PROFILE)"
 fi
 
 SEED_ARGS+=(--scenario "$SCENARIO" --profile "$PROFILE")

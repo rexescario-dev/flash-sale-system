@@ -8,8 +8,8 @@ export const STRESS_SCENARIOS = [
 
 export type StressScenario = (typeof STRESS_SCENARIOS)[number];
 
-/** Scenarios with a runnable k6 script (#53 harness-smoke, #54 purchase-load). */
-export const RUNNABLE_K6_SCENARIOS = ['harness-smoke', 'purchase-load'] as const;
+/** Scenarios with a runnable k6 script (#53 harness-smoke, #54 purchase-load, #55 oversell). */
+export const RUNNABLE_K6_SCENARIOS = ['harness-smoke', 'purchase-load', 'oversell'] as const;
 
 export type RunnableK6Scenario = (typeof RUNNABLE_K6_SCENARIOS)[number];
 
