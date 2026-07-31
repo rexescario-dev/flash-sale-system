@@ -56,10 +56,10 @@ Runs stress:seed → stress:run → stress:verify with scenario-appropriate flag
 Options:
   --scenario <name>   Stress scenario (default: harness-smoke)
   --profile <name>    Intensity profile (default: smoke)
-  --stock <n>         Seed stock override (purchase-load / oversell / duplicate-race; auto-resolved when omitted)
+  --stock <n>         Seed stock override (purchase-load / oversell / duplicate-race / high-volume; auto-resolved when omitted)
 
-For purchase-load, oversell, and duplicate-race without --stock, stock is resolved from the profile
-and scenario and passed to stress:seed only (not forwarded to stress:run or stress:verify).
+For purchase-load, oversell, duplicate-race, and high-volume without --stock, stock is resolved from the profile
+and scenario (high-volume uses comfortable stock) and passed to stress:seed only (not forwarded to stress:run or stress:verify).
 EOF
       exit 0
       ;;
@@ -71,7 +71,7 @@ EOF
   i=$((i + 1))
 done
 
-if [[ ( "$SCENARIO" == "purchase-load" || "$SCENARIO" == "oversell" || "$SCENARIO" == "duplicate-race" ) && "$HAS_STOCK" -eq 0 ]]; then
+if [[ ( "$SCENARIO" == "purchase-load" || "$SCENARIO" == "oversell" || "$SCENARIO" == "duplicate-race" || "$SCENARIO" == "high-volume" ) && "$HAS_STOCK" -eq 0 ]]; then
   # --silent: pnpm otherwise prints script banners to stdout and breaks integer capture.
   STOCK_VALUE="$(pnpm --silent stress:stock --profile="$PROFILE" --scenario="$SCENARIO")"
   HAS_STOCK=1
