@@ -1,6 +1,6 @@
 # Stress testing harness (EPIC-07)
 
-Privileged Prisma seed → k6 GraphQL `purchaseItem` → Prisma verify.
+Privileged Prisma seed → k6 GraphQL `purchaseItem` → Prisma verify → thin `report.md`.
 
 ## Prerequisites
 
@@ -68,13 +68,33 @@ Bare `pnpm --silent stress:stock <profile>` still resolves **purchase-load** com
 
 Running `stress:seed` directly without a resolver-derived `--stock` seeds the generic default (1000), which may prevent the oversell scenario from exercising constrained inventory. **Prefer `stress:test`** (or an explicit resolver-derived `--stock`).
 
+## Artifacts
+
+Each run writes under `tests/stress/results/<scenario>-<profile>/` (gitignored):
+
+| File              | Source                         |
+| ----------------- | ------------------------------ |
+| `k6-summary.json` | k6 `handleSummary` (canonical) |
+| `verifier.json`   | Prisma verifier                |
+| `report.md`       | `pnpm stress:report` (facts)   |
+
+Canonical summary fields: metadata, counters, `performance` (p50/p95/p99 + `http_reqs.rate` throughput), shared diagnostics (`attempts`, `classifiedTotal`, `accountingOk`). Scenario-specific fields are additive only.
+
+`stress:test` always invokes the reporter after verify. Split path:
+
+```bash
+pnpm stress:report -- --scenario oversell --profile smoke
+```
+
+Do not commit generated artifacts. Results narrative hub lands with #60.
+
 ### Harness smoke
 
 ```bash
 pnpm stress:test -- --scenario harness-smoke --profile smoke
 ```
 
-`stress:test` exits non-zero if k6 fails or the verifier reports invariant violations.
+`stress:test` exits non-zero if k6 fails, the verifier reports invariant violations, or (when prior stages succeeded) report generation fails.
 Unused stock on oversell is an informational warning (exit 0) when correctness gates pass.
 Leftover stock on `duplicate-race` is expected (no exhaustion warning); correctness limiter required.
 `stress:verify` requires `results/<scenario>-<profile>/k6-summary.json` by default (dual oracle).
@@ -85,5 +105,6 @@ See [EPIC-07 design spec](../../docs/superpowers/specs/2026-07-31-epic-07-perfor
 [#54 design](../../docs/superpowers/specs/2026-07-31-issue-54-flash-sale-load-test-design.md),
 [#55 design](../../docs/superpowers/specs/2026-07-31-issue-55-limited-inventory-concurrency-test-design.md),
 [#56 design](../../docs/superpowers/specs/2026-07-31-issue-56-same-user-concurrency-test-design.md),
-and [#57 design](../../docs/superpowers/specs/2026-07-31-issue-57-high-volume-api-test-design.md).
+[#57 design](../../docs/superpowers/specs/2026-07-31-issue-57-high-volume-api-test-design.md),
+and [#58 design](../../docs/superpowers/specs/2026-07-31-issue-58-capture-stress-test-metrics-design.md).
 Results narrative hub lands with #60.
