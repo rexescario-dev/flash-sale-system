@@ -51,6 +51,8 @@ Options:
   --profile <name>    Intensity profile (default: smoke)
   --stock <n>         Accepted for stress:test UX; ignored by k6 run
 
+Profiles are loaded from tests/stress/shared/profiles.json via STRESS_PROFILES_FILE.
+
 Environment (optional, passed through to k6 via -e as metadata/URLs only):
   GRAPHQL_URL           default http://localhost:3000/graphql
   LIMITER_PROFILE       summary metadata only (default: correctness) —
@@ -59,7 +61,7 @@ Environment (optional, passed through to k6 via -e as metadata/URLs only):
                         (or performance.env.example) values in Compose/.env.
   STRESS_ENVIRONMENT    default local
 
-Supported scenarios for k6 run in #53: harness-smoke only.
+Supported scenarios for k6 run: harness-smoke, purchase-load.
 EOF
       exit 0
       ;;
@@ -75,8 +77,11 @@ case "$SCENARIO" in
   harness-smoke)
     SCRIPT="tests/stress/k6/scenarios/harness-smoke.js"
     ;;
+  purchase-load)
+    SCRIPT="tests/stress/k6/scenarios/purchase-load.js"
+    ;;
   *)
-    echo "error: scenario '$SCENARIO' is not implemented for k6 yet (supported: harness-smoke)" >&2
+    echo "error: scenario '$SCENARIO' is not implemented for k6 yet (supported: harness-smoke, purchase-load)" >&2
     exit 1
     ;;
 esac
@@ -91,6 +96,7 @@ if ! command -v k6 >/dev/null 2>&1; then
   exit 1
 fi
 
+STRESS_PROFILES_FILE="$ROOT/tests/stress/shared/profiles.json"
 STRESS_STATE_FILE="$ROOT/tests/stress/.state/${SCENARIO}.json"
 RESULTS_DIR="$ROOT/tests/stress/results/${SCENARIO}-${PROFILE}"
 mkdir -p "$RESULTS_DIR"
@@ -107,6 +113,7 @@ echo "  summary: $STRESS_SUMMARY_PATH"
 
 # k6 does NOT inherit shell env into __ENV — pass every needed var with -e.
 exec k6 run \
+  -e "STRESS_PROFILES_FILE=${STRESS_PROFILES_FILE}" \
   -e "STRESS_STATE_FILE=${STRESS_STATE_FILE}" \
   -e "STRESS_SUMMARY_PATH=${STRESS_SUMMARY_PATH}" \
   -e "PROFILE=${PROFILE}" \

@@ -1,0 +1,5 @@
+{
+  "smoke": { "attempts": 100, "vus": 10 },
+  "standard": { "attempts": 1000, "vus": 50 },
+  "full": { "attempts": 10000, "vus": 100 }
+}
