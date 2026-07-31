@@ -1,6 +1,20 @@
 # Flash Sale System
 
-A scalable flash-sale system built with NestJS, GraphQL, React, TypeScript, PostgreSQL, Redis, Playwright, and k6.
+A concurrency-safe flash-sale system built with NestJS, GraphQL, React, TypeScript, PostgreSQL, Redis, and Playwright. Future scalability validation may include k6 load testing.
+
+## Overview
+
+Flash Sale System is a modular monolith that demonstrates transactional inventory reservation, a GraphQL customer API, Redis as a non-authoritative cache and rate-limit layer, and a layered automated testing strategy. PostgreSQL remains the source of truth for inventory and purchases.
+
+## Features
+
+- Flash sale catalog and purchase lifecycle
+- Concurrency-safe stock reservation and purchase flow
+- GraphQL API for catalog and purchase operations
+- PostgreSQL as the transactional source of truth
+- Redis-assisted query caching and purchase rate limiting
+- Automated unit, integration, smoke, and E2E testing
+- Future scalability validation may include k6 load testing
 
 ## Try the app
 
@@ -88,10 +102,6 @@ packages/
   types/        # @flash-sale/types (non-domain contracts only)
 ```
 
-## Redis
-
-Redis is non-authoritative: query cache for `flashSale` / `myPurchase` plus IP rate limiting for `purchaseItem`, with fail-open fallback to Postgres. See [docs/redis-caching-strategy.md](docs/redis-caching-strategy.md).
-
 ## E2E
 
 Real-stack Playwright suite under `e2e/` (smoke + regression). Canonical seed ownership is Playwright `globalSetup` — do not pre-seed in CI.
@@ -101,12 +111,28 @@ pnpm e2e:smoke
 pnpm e2e
 ```
 
-Full prerequisites, lifecycle, environment variables, project filters, headed/debug modes, traces, CI jobs, and troubleshooting: [Playwright E2E](docs/playwright-e2e.md).
+- Full Playwright prerequisites, lifecycle, environment variables, headed/debug modes, traces, CI jobs, and troubleshooting: [Playwright E2E](docs/playwright-e2e.md)
+- Smoke suite discovery and smoke CI usage: [Smoke testing](docs/smoke-testing.md)
 
 Port and Redis collisions: see [Local development — Troubleshooting](docs/local-development.md#troubleshooting).
 
-CI runs `e2e-smoke` and `e2e-full` as required checks on pull requests.
+## API
 
-## Architecture note
+The customer surface is a GraphQL API served by the NestJS app.
 
-Modular monolith: React → GraphQL → NestJS → PostgreSQL + Redis. See [Architecture](docs/architecture.md).
+- GraphQL: [http://localhost:3000/graphql](http://localhost:3000/graphql)
+- API health: [http://localhost:3000/health](http://localhost:3000/health)
+
+For the modular-monolith topology and request paths, see [Architecture](docs/architecture.md).
+
+## Documentation
+
+| Topic        | Document                                                                                   |
+| ------------ | ------------------------------------------------------------------------------------------ |
+| Architecture | [System architecture](docs/architecture.md)                                                |
+| Concurrency  | [Concurrency model](docs/concurrency-model.md)                                             |
+| Redis        | [Redis caching & rate-limit strategy](docs/redis-caching-strategy.md)                      |
+| Setup        | [Local development](docs/local-development.md)                                             |
+| Testing      | [Testing strategy](docs/testing-strategy.md)                                               |
+| Trade-offs   | [Technology trade-offs](docs/technology-trade-offs.md)                                     |
+| Future work  | [Technology trade-offs — Future evolution](docs/technology-trade-offs.md#future-evolution) |
