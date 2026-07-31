@@ -99,6 +99,11 @@ Unused stock on oversell is an informational warning (exit 0) when correctness g
 Leftover stock on `duplicate-race` is expected (no exhaustion warning); correctness limiter required.
 `stress:verify` requires `results/<scenario>-<profile>/k6-summary.json` by default (dual oracle).
 
+## Bottleneck analysis
+
+Evidence-backed constraint analysis: [docs/stress/bottlenecks.md](../../docs/stress/bottlenecks.md).
+Results narrative hub lands with #60.
+
 ## Design
 
 See [EPIC-07 design spec](../../docs/superpowers/specs/2026-07-31-epic-07-performance-stress-testing-design.md),
@@ -106,5 +111,6 @@ See [EPIC-07 design spec](../../docs/superpowers/specs/2026-07-31-epic-07-perfor
 [#55 design](../../docs/superpowers/specs/2026-07-31-issue-55-limited-inventory-concurrency-test-design.md),
 [#56 design](../../docs/superpowers/specs/2026-07-31-issue-56-same-user-concurrency-test-design.md),
 [#57 design](../../docs/superpowers/specs/2026-07-31-issue-57-high-volume-api-test-design.md),
-and [#58 design](../../docs/superpowers/specs/2026-07-31-issue-58-capture-stress-test-metrics-design.md).
+[#58 design](../../docs/superpowers/specs/2026-07-31-issue-58-capture-stress-test-metrics-design.md),
+and [#59 design](../../docs/superpowers/specs/2026-07-31-issue-59-analyze-stress-test-bottlenecks-design.md).
 Results narrative hub lands with #60.
