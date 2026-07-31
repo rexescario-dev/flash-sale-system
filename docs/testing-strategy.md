@@ -92,7 +92,7 @@ pnpm e2e:smoke
 
 **CI role:** Playwright smoke provides rapid end-to-end confidence.
 
-Procedures, local debugging, and smoke-specific operational detail belong to Issue #70.
+Suite discovery, local smoke execution, CI job usage, and how smoke specs are picked up are documented in [Smoke testing](smoke-testing.md).
 
 ## Stress testing (planned)
 
@@ -115,10 +115,10 @@ This mapping describes layer participation, not workflow YAML, job names, or bra
 - [System architecture](architecture.md)
 - [Local development](local-development.md)
 - [Playwright E2E](playwright-e2e.md)
+- [Smoke testing](smoke-testing.md)
 - [Concurrency model](concurrency-model.md)
 - [Redis caching & rate-limit strategy](redis-caching-strategy.md)
 
 **Planned work:**
 
-- Issue #70 — Smoke testing guide
 - Issue #71 — Stress testing (k6)

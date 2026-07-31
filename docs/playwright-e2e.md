@@ -54,14 +54,14 @@ For application environment variables and alternate ports (`PORT`, `VITE_API_URL
 
 Playwright lives in the top-level `e2e/` package (`@flash-sale/e2e`), with config in `e2e/playwright.config.ts` and specs under `e2e/tests/`.
 
-| Project      | Meaning in this repository                                                         |
-| ------------ | ---------------------------------------------------------------------------------- |
-| `smoke`      | Smallest suite: critical purchase journey for rapid CI confidence (`tests/smoke/`) |
-| `regression` | Broader real-stack journeys beyond smoke (`tests/regression/`)                     |
+| Project      | Meaning in this repository                                                                                                 |
+| ------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| `smoke`      | Smallest suite: critical purchase journey for rapid CI confidence (`tests/smoke/`). See [Smoke testing](smoke-testing.md). |
+| `regression` | Broader real-stack journeys beyond smoke (`tests/regression/`)                                                             |
 
 Operational config notes: `workers: 1`, `fullyParallel: false`, Desktop Chrome, `trace: 'on-first-retry'`.
 
-Smoke is a **subset** of E2E (same tooling). Deeper smoke workflow guidance belongs to Issue #70.
+Smoke is a **subset** of E2E (same tooling). Suite discovery and smoke CI detail: [Smoke testing](smoke-testing.md).
 
 ## Running
 
@@ -81,7 +81,7 @@ Runs smoke and regression (root script → `@flash-sale/e2e` `test:e2e`).
 pnpm e2e:smoke
 ```
 
-Runs the `smoke` project only. Smoke-specific procedures and operational detail will be expanded in Issue #70.
+`pnpm e2e:smoke` runs the Playwright smoke project. See [Smoke testing](smoke-testing.md) for how the smoke suite is organized and executed in CI.
 
 ### By project
 
@@ -162,9 +162,6 @@ Likely failures first:
 ## Related documentation
 
 - [Testing strategy](testing-strategy.md)
+- [Smoke testing](smoke-testing.md)
 - [Local development](local-development.md)
 - [System architecture](architecture.md)
-
-## Planned
-
-Smoke workflow guidance will be expanded in Issue #70.
