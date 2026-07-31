@@ -5,6 +5,7 @@ import path from 'node:path';
 import type { StressScenario, StressState } from '../seeder/types';
 
 import { resultsDir, statePath } from '../seeder/paths';
+import { unusedStockWarnings } from './unused-stock-warning';
 
 export type VerifyStressOptions = {
   /** When false, missing k6 summary is a hard failure (default). */
@@ -36,6 +37,7 @@ export type VerifyResult = {
   scenario: StressScenario;
   startedAt: string;
   stock: number;
+  warnings: string[];
 };
 
 type K6Summary = {
@@ -231,6 +233,7 @@ export async function verifyStress(options: VerifyStressOptions): Promise<Verify
     await prisma.$disconnect();
   }
 
+  const warnings = unusedStockWarnings(state.stock, purchaseCount);
   const ok = checks.every((check) => check.ok);
   const result: VerifyResult = {
     artifactPath,
@@ -245,6 +248,7 @@ export async function verifyStress(options: VerifyStressOptions): Promise<Verify
     scenario,
     startedAt,
     stock: state.stock,
+    warnings,
   };
 
   await mkdir(outDir, { recursive: true });
@@ -267,6 +271,7 @@ export async function verifyStress(options: VerifyStressOptions): Promise<Verify
         startedAt,
         stateFile,
         summaryFile: summary ? summaryFile : null,
+        warnings,
       },
       null,
       2,

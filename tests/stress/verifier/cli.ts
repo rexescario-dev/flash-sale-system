@@ -108,6 +108,9 @@ function formatResult(result: VerifyResult): string {
   for (const check of result.checks) {
     lines.push(`  ${check.ok ? '✓' : '✗'} ${check.name}: ${check.detail}`);
   }
+  for (const warning of result.warnings) {
+    lines.push(warning);
+  }
   lines.push(`artifact: ${result.artifactPath}`);
   return `${lines.join('\n')}\n`;
 }
