@@ -61,7 +61,7 @@ Environment (optional, passed through to k6 via -e as metadata/URLs only):
                         (or performance.env.example) values in Compose/.env.
   STRESS_ENVIRONMENT    default local
 
-Supported scenarios for k6 run: harness-smoke, purchase-load, oversell.
+Supported scenarios for k6 run: harness-smoke, purchase-load, oversell, duplicate-race.
 EOF
       exit 0
       ;;
@@ -83,8 +83,11 @@ case "$SCENARIO" in
   oversell)
     SCRIPT="tests/stress/k6/scenarios/oversell.js"
     ;;
+  duplicate-race)
+    SCRIPT="tests/stress/k6/scenarios/duplicate-race.js"
+    ;;
   *)
-    echo "error: scenario '$SCENARIO' is not implemented for k6 yet (supported: harness-smoke, purchase-load, oversell)" >&2
+    echo "error: scenario '$SCENARIO' is not implemented for k6 yet (supported: harness-smoke, purchase-load, oversell, duplicate-race)" >&2
     exit 1
     ;;
 esac
