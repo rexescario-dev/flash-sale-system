@@ -15,7 +15,11 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,mjs,cjs,json,md,yml,yaml}\"",
     "prepare": "husky",
     "e2e": "pnpm --filter @flash-sale/e2e test:e2e",
-    "e2e:smoke": "pnpm --filter @flash-sale/e2e test:smoke"
+    "e2e:smoke": "pnpm --filter @flash-sale/e2e test:smoke",
+    "stress:seed": "pnpm --filter api exec tsx ../../tests/stress/seeder/cli.ts",
+    "stress:run": "bash scripts/stress-run.sh",
+    "stress:verify": "pnpm --filter api exec tsx ../../tests/stress/verifier/cli.ts",
+    "stress:test": "bash scripts/stress-test.sh"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,mjs,cjs}": [
