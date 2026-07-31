@@ -24,6 +24,8 @@ export const options = {
       vus: profile.vus,
     },
   },
+  // Ensure p50/p95/p99 appear in handleSummary metrics (k6 defaults omit some percentiles).
+  summaryTrendStats: ['avg', 'min', 'med', 'p(90)', 'p(95)', 'p(99)', 'max', 'count'],
   thresholds: {
     // Correctness gates (comfortable stock ⇒ sold_out impossible).
     // purchase_rate_limited intentionally ungated — capacity signal.
@@ -93,7 +95,9 @@ export function handleSummary(data) {
   const performance = {
     http_req_duration_ms: {
       avg: metricValue(data, 'http_req_duration', 'avg'),
-      p50: metricValue(data, 'http_req_duration', 'p(50)'),
+      p50:
+        metricValue(data, 'http_req_duration', 'p(50)') ??
+        metricValue(data, 'http_req_duration', 'med'),
       p95: metricValue(data, 'http_req_duration', 'p(95)'),
       p99: metricValue(data, 'http_req_duration', 'p(99)'),
     },
