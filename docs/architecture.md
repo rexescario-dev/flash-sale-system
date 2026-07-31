@@ -52,6 +52,7 @@ Additional read operations (`myPurchase`, `myPurchases`) follow the same archite
 ## Related docs
 
 - [Concurrency model](concurrency-model.md)
+- [Fault tolerance strategy](fault-tolerance-strategy.md)
 - [Local development](local-development.md)
 - [Purchase sequence](purchase-sequence.md)
 - [Redis caching & rate-limit strategy](redis-caching-strategy.md)
