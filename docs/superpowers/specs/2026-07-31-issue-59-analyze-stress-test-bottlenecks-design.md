@@ -30,51 +30,51 @@ Satisfied when:
 
 **Constraint-centric analysis document only (Approach 1):**
 
-| Surface                                                         | Role after #59                                                                 |
-| --------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| Fresh local (or designated-runner) `pnpm stress:test` runs      | Produce real `#58` artifacts (gitignored) used as evidence                     |
-| `docs/stress/bottlenecks.md`                                    | Living, constraint-centric analysis (primary AC deliverable)                   |
-| `docs/superpowers/specs/…issue-59…-design.md` (this file)       | Implementation design / how #59 was executed                                   |
-| `tests/stress/README.md`                                        | Thin pointer to `docs/stress/bottlenecks.md`                                   |
-| `#58` reporter / metrics / scenarios                            | Unchanged consumers — read-only for this issue                                 |
+| Surface                                                    | Role after #59                                               |
+| ---------------------------------------------------------- | ------------------------------------------------------------ |
+| Fresh local (or designated-runner) `pnpm stress:test` runs | Produce real `#58` artifacts (gitignored) used as evidence   |
+| `docs/stress/bottlenecks.md`                               | Living, constraint-centric analysis (primary AC deliverable) |
+| `docs/superpowers/specs/…issue-59…-design.md` (this file)  | Implementation design / how #59 was executed                 |
+| `tests/stress/README.md`                                   | Thin pointer to `docs/stress/bottlenecks.md`                 |
+| `#58` reporter / metrics / scenarios                       | Unchanged consumers — read-only for this issue               |
 
 **Rejected alternatives:**
 
-| Alternative                                         | Why rejected                                                                 |
-| --------------------------------------------------- | ---------------------------------------------------------------------------- |
-| New `stress:bottlenecks` CLI / parsers / aggregators | AC asks for analysis, not tooling; overlaps `#58`/`#60` reporting surface    |
-| Analysis + tooling hybrid                            | Expands maintenance; blurs issue boundary                                    |
-| Scenario-centric narrative only                      | Forces readers to synthesize bottlenecks; mismatches issue title             |
-| Artifact dump without interpretation                 | Does not “identify” bottlenecks                                              |
-| Close on existing `duplicate-race-smoke` alone       | Insufficient for capacity / limiter / latency claims                         |
-| Require both `standard` and `full` high-volume       | Rigid DoD; successful `full` is the primary capacity evidence                |
-| Component claims needing APM/pg_stat only            | Blocks naming clearly instrumented gates (e.g. rate limiter)                 |
+| Alternative                                          | Why rejected                                                              |
+| ---------------------------------------------------- | ------------------------------------------------------------------------- |
+| New `stress:bottlenecks` CLI / parsers / aggregators | AC asks for analysis, not tooling; overlaps `#58`/`#60` reporting surface |
+| Analysis + tooling hybrid                            | Expands maintenance; blurs issue boundary                                 |
+| Scenario-centric narrative only                      | Forces readers to synthesize bottlenecks; mismatches issue title          |
+| Artifact dump without interpretation                 | Does not “identify” bottlenecks                                           |
+| Close on existing `duplicate-race-smoke` alone       | Insufficient for capacity / limiter / latency claims                      |
+| Require both `standard` and `full` high-volume       | Rigid DoD; successful `full` is the primary capacity evidence             |
+| Component claims needing APM/pg_stat only            | Blocks naming clearly instrumented gates (e.g. rate limiter)              |
 
 ## Locked decisions
 
-| Area                    | Decision                                                                                                                                      |
-| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| Deliverable             | Evidence-backed analysis document only — no new CLI, parsers, JSON aggregators, report scripts, `handleSummary`, or metrics changes           |
-| Design vs analysis      | Design in `docs/superpowers/specs/`; living analysis in `docs/stress/bottlenecks.md`                                                          |
-| README                  | Thin link from `tests/stress/README.md` only; do not duplicate findings                                                                       |
-| Doc organization        | Constraint-centric (Approach 1)                                                                                                               |
-| Section template        | Observed → Interpretation → Evidence → Confidence → Limitations                                                                               |
-| Confidence rubric       | High / Medium / Low / Insufficient evidence (see below)                                                                                       |
-| Evidence DoD            | Fresh local (or designated-runner) runs required where feasible; prefer `high-volume`/`full`; `standard` fallback with lower capacity confidence |
-| Correctness evidence    | `oversell`, `duplicate-race`, `purchase-load` at `smoke` or `standard` to ground inventory/uniqueness/baseline observations                     |
-| Attribution             | Observations + evidence-backed interpretations allowed; speculation forbidden                                                                 |
-| Missing runs            | Explicit **Insufficient evidence**; no fabricated capacity/bottleneck claims                                                                  |
-| Freeze                  | `#54`–`#58` thresholds, proofs, stock formulas, and reporting contract unchanged                                                              |
-| Out of slice            | `#60` results hub, `#71` runbook expansion, invented numbers, committed gitignored artifacts, `#134` CSS AC                                   |
+| Area                 | Decision                                                                                                                                         |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Deliverable          | Evidence-backed analysis document only — no new CLI, parsers, JSON aggregators, report scripts, `handleSummary`, or metrics changes              |
+| Design vs analysis   | Design in `docs/superpowers/specs/`; living analysis in `docs/stress/bottlenecks.md`                                                             |
+| README               | Thin link from `tests/stress/README.md` only; do not duplicate findings                                                                          |
+| Doc organization     | Constraint-centric (Approach 1)                                                                                                                  |
+| Section template     | Observed → Interpretation → Evidence → Confidence → Limitations                                                                                  |
+| Confidence rubric    | High / Medium / Low / Insufficient evidence (see below)                                                                                          |
+| Evidence DoD         | Fresh local (or designated-runner) runs required where feasible; prefer `high-volume`/`full`; `standard` fallback with lower capacity confidence |
+| Correctness evidence | `oversell`, `duplicate-race`, `purchase-load` at `smoke` or `standard` to ground inventory/uniqueness/baseline observations                      |
+| Attribution          | Observations + evidence-backed interpretations allowed; speculation forbidden                                                                    |
+| Missing runs         | Explicit **Insufficient evidence**; no fabricated capacity/bottleneck claims                                                                     |
+| Freeze               | `#54`–`#58` thresholds, proofs, stock formulas, and reporting contract unchanged                                                                 |
+| Out of slice         | `#60` results hub, `#71` runbook expansion, invented numbers, committed gitignored artifacts, `#134` CSS AC                                      |
 
 ## Confidence rubric
 
-| Confidence            | Meaning                                                                                                                                              |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Confidence            | Meaning                                                                                                                                                         |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | High                  | Supported by multiple relevant metrics and corroborated by representative evidence (for example, multiple runs/profiles or a representative full-capacity run). |
-| Medium                | Supported by one representative run or consistent indirect evidence.                                                                                 |
-| Low                   | Limited evidence; observation is real but attribution remains tentative.                                                                             |
-| Insufficient evidence | Required artifacts unavailable or the required run could not be completed.                                                                           |
+| Medium                | Supported by one representative run or consistent indirect evidence.                                                                                            |
+| Low                   | Limited evidence; observation is real but attribution remains tentative.                                                                                        |
+| Insufficient evidence | Required artifacts unavailable or the required run could not be completed.                                                                                      |
 
 Use these labels only — do not invent free-form confidence wording.
 
@@ -109,12 +109,12 @@ Use these labels only — do not invent free-form confidence wording.
 
 ## Evidence matrix
 
-| Purpose                         | Scenario         | Profile                                              | Limiter       |
-| ------------------------------- | ---------------- | ---------------------------------------------------- | ------------- |
-| Capacity / limiter / latency    | `high-volume`    | `full` preferred; `standard` if `full` cannot finish | performance   |
-| Inventory / oversell            | `oversell`       | `smoke` or `standard`                                | correctness   |
-| Per-user uniqueness             | `duplicate-race` | `smoke` or `standard`                                | correctness   |
-| Baseline contention             | `purchase-load`  | `smoke` or `standard`                                | correctness   |
+| Purpose                      | Scenario         | Profile                                              | Limiter     |
+| ---------------------------- | ---------------- | ---------------------------------------------------- | ----------- |
+| Capacity / limiter / latency | `high-volume`    | `full` preferred; `standard` if `full` cannot finish | performance |
+| Inventory / oversell         | `oversell`       | `smoke` or `standard`                                | correctness |
+| Per-user uniqueness          | `duplicate-race` | `smoke` or `standard`                                | correctness |
+| Baseline contention          | `purchase-load`  | `smoke` or `standard`                                | correctness |
 
 **Profile confidence note:** Observations under `full` support higher-confidence capacity/bottleneck conclusions. Observations under `standard` are valid but capacity conclusions are limited. If `full` was not run, capacity sections must say so explicitly (Insufficient evidence / Low as appropriate) — never treat `standard` as equivalent to `full`.
 
@@ -197,12 +197,12 @@ Example shape:
 
 ## Documentation touchpoints
 
-| File                         | Change                                                                      |
-| ---------------------------- | --------------------------------------------------------------------------- |
-| `docs/stress/bottlenecks.md` | Create / fill with evidence-backed analysis                                 |
-| `tests/stress/README.md`     | One thin link to `docs/stress/bottlenecks.md`; no duplicated findings       |
-| Root README / `#71` hubs     | Unchanged in `#59`                                                          |
-| `#60` hub                    | Out of slice; may later link this analysis without relocating it            |
+| File                         | Change                                                                |
+| ---------------------------- | --------------------------------------------------------------------- |
+| `docs/stress/bottlenecks.md` | Create / fill with evidence-backed analysis                           |
+| `tests/stress/README.md`     | One thin link to `docs/stress/bottlenecks.md`; no duplicated findings |
+| Root README / `#71` hubs     | Unchanged in `#59`                                                    |
+| `#60` hub                    | Out of slice; may later link this analysis without relocating it      |
 
 ## Testing / verification for this issue
 
@@ -224,11 +224,11 @@ Example shape:
 
 ## Relationship to later issues
 
-| Issue | How #59 relates without overlapping                                              |
-| ----- | -------------------------------------------------------------------------------- |
-| #58   | Consumes canonical artifacts; does not change emission or thin `report.md`       |
-| #60   | Broader results narrative hub / expected-vs-actual / environment limits matrix   |
-| #71   | EPIC-08 discoverability / runbook links after stress results exist               |
+| Issue | How #59 relates without overlapping                                            |
+| ----- | ------------------------------------------------------------------------------ |
+| #58   | Consumes canonical artifacts; does not change emission or thin `report.md`     |
+| #60   | Broader results narrative hub / expected-vs-actual / environment limits matrix |
+| #71   | EPIC-08 discoverability / runbook links after stress results exist             |
 
 ## Spec self-review checklist
 
