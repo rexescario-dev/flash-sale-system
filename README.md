@@ -46,6 +46,24 @@ Also available: API [http://localhost:3000](http://localhost:3000) · GraphQL [h
 
 Full local workflows, env details, and troubleshooting: [Local development](docs/local-development.md).
 
+![Flash sale catalog](docs/images/flash-sale-catalog.png)
+
+_Catalog — browse available flash sales._
+
+### Screenshots
+
+**Sale detail — choose an active sale**
+
+![Sale detail](docs/images/flash-sale-detail.png)
+
+**Purchase success — completed purchase**
+
+![Purchase success](docs/images/flash-sale-success.png)
+
+**My purchases — review purchase history**
+
+![My purchases](docs/images/flash-sale-purchases.png)
+
 ---
 
 ## Quick Start
