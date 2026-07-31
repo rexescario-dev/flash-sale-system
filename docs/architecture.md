@@ -55,4 +55,5 @@ Additional read operations (`myPurchase`, `myPurchases`) follow the same archite
 - [Local development](local-development.md)
 - [Purchase sequence](purchase-sequence.md)
 - [Redis caching & rate-limit strategy](redis-caching-strategy.md)
+- [Scalability strategy](scalability-strategy.md)
 - [Testing strategy](testing-strategy.md)
