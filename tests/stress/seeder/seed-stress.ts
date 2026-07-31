@@ -2,6 +2,7 @@ import { PrismaClient } from '@prisma/client';
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
+import { getScenarioPolicy } from '../lib/scenario-policy';
 import { statePath } from './paths';
 import { clearStressRedisKeys, resetStressOwned } from './reset-stress';
 import {
@@ -82,8 +83,10 @@ export async function seedStress(options: SeedStressOptions = {}): Promise<Stres
 
     await clearStressRedisKeys(redisUrl, flashSaleId);
 
+    const policy = getScenarioPolicy(scenario);
+
     const state: StressState = {
-      fixedUserId: null,
+      fixedUserId: policy.fixedUserId,
       flashSaleId,
       productId,
       runId,

@@ -7,6 +7,7 @@ import {
   resolveComfortableStock,
   resolveStock,
 } from './comfortable-stock';
+import { DUPLICATE_RACE_STOCK } from './scenario-policy';
 
 describe('comfortableStock', () => {
   it('never returns less than the generic seeder default (1000)', () => {
@@ -62,8 +63,14 @@ describe('resolveStock', () => {
     assert.equal(resolveStock('full', 'oversell'), 100);
   });
 
+  it('routes duplicate-race to profile-independent DUPLICATE_RACE_STOCK', () => {
+    assert.equal(resolveStock('smoke', 'duplicate-race'), DUPLICATE_RACE_STOCK);
+    assert.equal(resolveStock('standard', 'duplicate-race'), DUPLICATE_RACE_STOCK);
+    assert.equal(resolveStock('full', 'duplicate-race'), DUPLICATE_RACE_STOCK);
+  });
+
   it('rejects unknown profiles and unsupported scenarios', () => {
     assert.throws(() => resolveStock('nope', 'oversell'), /Unknown profile/);
-    assert.throws(() => resolveStock('smoke', 'duplicate-race'), /Unsupported scenario/);
+    assert.throws(() => resolveStock('smoke', 'high-volume'), /Unsupported scenario/);
   });
 });
