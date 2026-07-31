@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import type { StressScenario, StressState } from '../seeder/types';
 
+import { getScenarioPolicy } from '../lib/scenario-policy';
 import { resultsDir, statePath } from '../seeder/paths';
 import { unusedStockWarnings } from './unused-stock-warning';
 
@@ -233,7 +234,8 @@ export async function verifyStress(options: VerifyStressOptions): Promise<Verify
     await prisma.$disconnect();
   }
 
-  const warnings = unusedStockWarnings(state.stock, purchaseCount);
+  const policy = getScenarioPolicy(state.scenario);
+  const warnings = unusedStockWarnings(state.stock, purchaseCount, policy.expectsStockExhaustion);
   const ok = checks.every((check) => check.ok);
   const result: VerifyResult = {
     artifactPath,

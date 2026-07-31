@@ -5,16 +5,20 @@ import { unusedStockWarnings } from './unused-stock-warning';
 
 describe('unusedStockWarnings', () => {
   it('is empty when inventory is exhausted', () => {
-    assert.deepEqual(unusedStockWarnings(100, 100), []);
+    assert.deepEqual(unusedStockWarnings(100, 100, true), []);
   });
 
-  it('is empty when purchaseCount exceeds stock (oversell handled by hard gates)', () => {
-    assert.deepEqual(unusedStockWarnings(100, 101), []);
+  it('is empty when purchaseCount exceeds stock', () => {
+    assert.deepEqual(unusedStockWarnings(100, 101, true), []);
   });
 
-  it('emits a single warning when purchases are below stock', () => {
-    assert.deepEqual(unusedStockWarnings(100, 99), [
+  it('emits a warning when purchases are below stock and exhaustion is expected', () => {
+    assert.deepEqual(unusedStockWarnings(100, 99, true), [
       'WARNING: Inventory not fully exhausted. stock=100 purchaseCount=99 unusedStock=1',
     ]);
+  });
+
+  it('is empty when leftover stock is expected (no exhaustion expectation)', () => {
+    assert.deepEqual(unusedStockWarnings(10, 1, false), []);
   });
 });
