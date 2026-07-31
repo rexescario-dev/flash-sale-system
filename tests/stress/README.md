@@ -8,6 +8,11 @@ Privileged Prisma seed → k6 GraphQL `purchaseItem` → Prisma verify.
 - Official [k6](https://k6.io) binary on `PATH` (`k6 version`)
 - API started with the intended limiter profile — see `k6/config/*.env.example`
   (k6 env vars do **not** change API rate limits; put values in Compose/`env_file`)
+- **#57 `high-volume`:** start API with `k6/config/performance.env.example` (not correctness).
+  Hard gates: `unexpected` / `duplicate` / `sold_out == 0`, `success <= seededStock`, accounting identity;
+  `RATE_LIMITED` / latency / RPS are observational (success may be 0).
+  `pnpm --silent stress:policy --scenario=high-volume --field=expectedLimiterProfile` → `performance` (summary metadata only).
+  Wrappers never reconfigure the API limiter.
 
 ## Runnable scenarios
 
@@ -17,8 +22,7 @@ Privileged Prisma seed → k6 GraphQL `purchaseItem` → Prisma verify.
 | `purchase-load`  | #54   | Baseline concurrent purchase load (strict all-success)            |
 | `oversell`       | #55   | Limited inventory / oversell (`0 < purchase_success <= stock`)    |
 | `duplicate-race` | #56   | Same-user race (`SUCCESS=1`, `DUPLICATE=N-1`)                     |
-
-Other scenario names may be seeded for later issues, but `pnpm stress:run` / `stress:test` will fail until those scripts land (#57).
+| `high-volume`    | #57   | Observation-first capacity/latency (performance limiter; `RATE_LIMITED` allowed) |
 
 ## Commands (repo root)
 
@@ -35,6 +39,9 @@ pnpm stress:test -- --scenario oversell --profile smoke
 
 # #56 same-user / duplicate-race (constant stock 10 auto-resolved)
 pnpm stress:test -- --scenario duplicate-race --profile smoke
+
+# #57 high-volume (comfortable stock auto-resolved; API must use performance limiter)
+pnpm stress:test -- --scenario high-volume --profile smoke
 ```
 
 Stock policy via shared profiles + `resolveStock(profile, scenario)`:
@@ -42,6 +49,7 @@ Stock policy via shared profiles + `resolveStock(profile, scenario)`:
 | Scenario         | Formula (internal)                          | smoke / standard / full |
 | ---------------- | ------------------------------------------- | ----------------------- |
 | `purchase-load`  | `max(1000, ceil(attempts * 1.2))`           | 1000 / 1200 / 12000     |
+| `high-volume`    | `max(1000, ceil(attempts * 1.2))` (same as purchase-load) | 1000 / 1200 / 12000 |
 | `oversell`       | `min(100, max(10, floor(attempts * 0.10)))` | 10 / 100 / 100          |
 | `duplicate-race` | constant `10` (profile-independent)         | 10 / 10 / 10            |
 
@@ -76,5 +84,6 @@ Leftover stock on `duplicate-race` is expected (no exhaustion warning); correctn
 See [EPIC-07 design spec](../../docs/superpowers/specs/2026-07-31-epic-07-performance-stress-testing-design.md),
 [#54 design](../../docs/superpowers/specs/2026-07-31-issue-54-flash-sale-load-test-design.md),
 [#55 design](../../docs/superpowers/specs/2026-07-31-issue-55-limited-inventory-concurrency-test-design.md),
-and [#56 design](../../docs/superpowers/specs/2026-07-31-issue-56-same-user-concurrency-test-design.md).
+[#56 design](../../docs/superpowers/specs/2026-07-31-issue-56-same-user-concurrency-test-design.md),
+and [#57 design](../../docs/superpowers/specs/2026-07-31-issue-57-high-volume-api-test-design.md).
 Results narrative hub lands with #60.
