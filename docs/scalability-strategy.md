@@ -71,7 +71,7 @@ All API instances share the same PostgreSQL database and Redis deployment. Becau
 This document does not cover:
 
 - Fault tolerance, degradation, retries, or recovery ([Fault tolerance strategy](fault-tolerance-strategy.md))
-- Architectural rationale, alternatives, or scaling-limitation essays (Issue #66)
+- Architectural rationale, alternatives, or scaling-limitation essays ([Technology trade-offs](technology-trade-offs.md))
 - Redis keys, TTLs, rate-limit algorithms, or fail-open behavior ([Redis caching & rate-limit strategy](redis-caching-strategy.md))
 - Purchase concurrency guarantees ([Concurrency model](concurrency-model.md))
 - End-to-end purchase request lifecycle ([Purchase sequence](purchase-sequence.md))
@@ -82,11 +82,8 @@ This document does not cover:
 
 - [System architecture](architecture.md)
 - [Fault tolerance strategy](fault-tolerance-strategy.md)
+- [Technology trade-offs](technology-trade-offs.md)
 - [Concurrency model](concurrency-model.md)
 - [Purchase sequence](purchase-sequence.md)
 - [Redis caching & rate-limit strategy](redis-caching-strategy.md)
 - [Local development](local-development.md)
-
-**Planned work**
-
-- Issue #66 — Technology / architecture trade-offs
