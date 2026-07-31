@@ -4,7 +4,12 @@ import path from 'node:path';
 
 import { statePath } from './paths';
 import { clearStressRedisKeys, resetStressOwned } from './reset-stress';
-import { isRunnableK6Scenario, type StressScenario, type StressState } from './types';
+import {
+  isRunnableK6Scenario,
+  RUNNABLE_K6_SCENARIOS,
+  type StressScenario,
+  type StressState,
+} from './types';
 
 export { isStressScenario } from './types';
 
@@ -44,7 +49,7 @@ export async function seedStress(options: SeedStressOptions = {}): Promise<Stres
 
   if (!isRunnableK6Scenario(scenario)) {
     process.stderr.write(
-      `warning: scenario '${scenario}' can be seeded, but k6 run is not wired yet (#53 supports: harness-smoke).\n`,
+      `warning: scenario '${scenario}' can be seeded, but k6 run is not wired yet (runnable: ${RUNNABLE_K6_SCENARIOS.join(', ')}).\n`,
     );
   }
 
