@@ -297,10 +297,10 @@ Rules:
 3. If `SCENARIO=purchase-load` and `--stock` was **not** provided, compute:
 
    ```bash
-   STOCK="$(pnpm stress:stock "$PROFILE")"
+   STOCK="$(pnpm --silent stress:stock "$PROFILE")"
    ```
 
-   (`pnpm stress:stock` stdout is only the integer.) Append `--stock "$STOCK"` to **`SEED_ARGS` only**.
+   (`pnpm --silent stress:stock` stdout is only the integer — without `--silent`, pnpm banners pollute capture.) Append `--stock "$STOCK"` to **`SEED_ARGS` only**.
 
 4. If the caller already passed `--stock`, honor it exactly on `SEED_ARGS` (no override).
 5. For other scenarios (e.g. `harness-smoke`), do not inject stock.
@@ -354,7 +354,7 @@ while [[ $i -lt ${#ARGS[@]} ]]; do
 done
 
 if [[ "$SCENARIO" == "purchase-load" && "$HAS_STOCK" -eq 0 ]]; then
-  STOCK_VALUE="$(pnpm stress:stock "$PROFILE")"
+  STOCK_VALUE="$(pnpm --silent stress:stock "$PROFILE")"
   HAS_STOCK=1
   echo "stress:test: purchase-load comfortable stock=$STOCK_VALUE (profile=$PROFILE)"
 fi
