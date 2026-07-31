@@ -33,7 +33,7 @@ Comfortable stock formula: `max(1000, ceil(attempts * 1.2))` (smoke → 1000, st
 ### Split path (`purchase-load`)
 
 ```bash
-STOCK=$(pnpm stress:stock standard)
+STOCK=$(pnpm --silent stress:stock standard)
 pnpm stress:seed -- --scenario purchase-load --stock "$STOCK"
 pnpm stress:run -- --scenario purchase-load --profile standard
 pnpm stress:verify -- --scenario purchase-load --profile standard

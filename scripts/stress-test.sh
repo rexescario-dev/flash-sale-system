@@ -72,7 +72,8 @@ EOF
 done
 
 if [[ "$SCENARIO" == "purchase-load" && "$HAS_STOCK" -eq 0 ]]; then
-  STOCK_VALUE="$(pnpm stress:stock "$PROFILE")"
+  # --silent: pnpm otherwise prints script banners to stdout and breaks integer capture.
+  STOCK_VALUE="$(pnpm --silent stress:stock "$PROFILE")"
   HAS_STOCK=1
   echo "stress:test: purchase-load comfortable stock=$STOCK_VALUE (profile=$PROFILE)"
 fi
