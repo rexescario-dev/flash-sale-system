@@ -18,6 +18,7 @@
     "e2e:smoke": "pnpm --filter @flash-sale/e2e test:smoke",
     "stress:seed": "pnpm --filter api exec tsx ../../tests/stress/seeder/cli.ts",
     "stress:stock": "pnpm exec tsx tests/stress/lib/resolve-comfortable-stock.ts",
+    "stress:policy": "pnpm exec tsx tests/stress/lib/resolve-scenario-policy.ts",
     "stress:run": "bash scripts/stress-run.sh",
     "stress:verify": "pnpm --filter api exec tsx ../../tests/stress/verifier/cli.ts",
     "stress:test": "bash scripts/stress-test.sh"

@@ -69,8 +69,15 @@ describe('resolveStock', () => {
     assert.equal(resolveStock('full', 'duplicate-race'), DUPLICATE_RACE_STOCK);
   });
 
+  it('routes high-volume to comfortable stock (same as purchase-load)', () => {
+    assert.equal(resolveStock('smoke', 'high-volume'), 1000);
+    assert.equal(resolveStock('standard', 'high-volume'), 1200);
+    assert.equal(resolveStock('full', 'high-volume'), 12000);
+    assert.equal(resolveStock('smoke', 'high-volume'), resolveStock('smoke', 'purchase-load'));
+  });
+
   it('rejects unknown profiles and unsupported scenarios', () => {
     assert.throws(() => resolveStock('nope', 'oversell'), /Unknown profile/);
-    assert.throws(() => resolveStock('smoke', 'high-volume'), /Unsupported scenario/);
+    assert.throws(() => resolveStock('smoke', 'not-a-scenario'), /Unsupported scenario/);
   });
 });

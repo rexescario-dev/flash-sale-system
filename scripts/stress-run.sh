@@ -55,13 +55,15 @@ Profiles are loaded from tests/stress/shared/profiles.json via STRESS_PROFILES_F
 
 Environment (optional, passed through to k6 via -e as metadata/URLs only):
   GRAPHQL_URL           default http://localhost:3000/graphql
-  LIMITER_PROFILE       summary metadata only (default: correctness) —
-                        does NOT change the API rate limiter. Start the API
-                        with tests/stress/k6/config/correctness.env.example
+  LIMITER_PROFILE       summary metadata only — does NOT reconfigure the API
+                        rate limiter. Precedence: explicit env value →
+                        ScenarioPolicy.expectedLimiterProfile (via stress:policy)
+                        → correctness. Wrappers never modify API configuration;
+                        start the API with tests/stress/k6/config/correctness.env.example
                         (or performance.env.example) values in Compose/.env.
   STRESS_ENVIRONMENT    default local
 
-Supported scenarios for k6 run: harness-smoke, purchase-load, oversell, duplicate-race.
+Supported scenarios for k6 run: harness-smoke, purchase-load, oversell, duplicate-race, high-volume.
 EOF
       exit 0
       ;;
@@ -86,8 +88,11 @@ case "$SCENARIO" in
   duplicate-race)
     SCRIPT="tests/stress/k6/scenarios/duplicate-race.js"
     ;;
+  high-volume)
+    SCRIPT="tests/stress/k6/scenarios/high-volume.js"
+    ;;
   *)
-    echo "error: scenario '$SCENARIO' is not implemented for k6 yet (supported: harness-smoke, purchase-load, oversell, duplicate-race)" >&2
+    echo "error: scenario '$SCENARIO' is not implemented for k6 yet (supported: harness-smoke, purchase-load, oversell, duplicate-race, high-volume)" >&2
     exit 1
     ;;
 esac
@@ -109,6 +114,11 @@ mkdir -p "$RESULTS_DIR"
 STRESS_SUMMARY_PATH="$RESULTS_DIR/k6-summary.json"
 
 GRAPHQL_URL="${GRAPHQL_URL:-http://localhost:3000/graphql}"
+# LIMITER_PROFILE precedence: explicit env → ScenarioPolicy.expectedLimiterProfile → correctness
+# Summary metadata only — does NOT reconfigure the API rate limiter.
+if [[ -z "${LIMITER_PROFILE:-}" ]]; then
+  LIMITER_PROFILE="$(pnpm --silent stress:policy --scenario="$SCENARIO" --field=expectedLimiterProfile)" || LIMITER_PROFILE="correctness"
+fi
 LIMITER_PROFILE="${LIMITER_PROFILE:-correctness}"
 STRESS_ENVIRONMENT="${STRESS_ENVIRONMENT:-local}"
 

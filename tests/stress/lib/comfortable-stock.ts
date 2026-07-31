@@ -10,7 +10,7 @@ export const CONSTRAINED_STOCK_RATIO = 0.1;
 export const CONSTRAINED_STOCK_MIN = 10;
 export const CONSTRAINED_STOCK_MAX = 100;
 
-export type StockPolicyScenario = 'duplicate-race' | 'oversell' | 'purchase-load';
+export type StockPolicyScenario = 'duplicate-race' | 'high-volume' | 'oversell' | 'purchase-load';
 
 type Profile = {
   attempts: number;
@@ -54,17 +54,17 @@ export function resolveStock(profileName: string, scenario: string): number {
   }
 
   const policy = getScenarioPolicy(scenario);
-  if (policy.stockConstant !== null) {
-    return policy.stockConstant;
-  }
 
-  switch (scenario) {
-    case 'purchase-load':
+  switch (policy.stockKind) {
+    case 'constant':
+      if (policy.stockConstant === null) {
+        throw new Error(`stockKind constant requires stockConstant for scenario: ${scenario}`);
+      }
+      return policy.stockConstant;
+    case 'comfortable':
       return comfortableStock(profile.attempts);
-    case 'oversell':
+    case 'constrained':
       return constrainedStock(profile.attempts);
-    default:
-      throw new Error(`Unsupported scenario for stock policy: ${scenario}`);
   }
 }
 
