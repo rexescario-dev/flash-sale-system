@@ -2,7 +2,7 @@ import { resolveStock, type StockPolicyScenario } from './comfortable-stock';
 
 function printHelp(): void {
   process.stderr.write(`Usage:
-  pnpm stress:stock --profile=<name> --scenario=<purchase-load|oversell|duplicate-race>
+  pnpm stress:stock --profile=<name> --scenario=<purchase-load|oversell|duplicate-race|high-volume>
   pnpm stress:stock <profile>   # compat: scenario defaults to purchase-load
 
 Prints a single integer stock value on stdout.
@@ -80,9 +80,14 @@ function parseArgs(argv: string[]): {
     throw new Error('Do not mix positional profile with --profile');
   }
 
-  if (scenario !== 'purchase-load' && scenario !== 'oversell' && scenario !== 'duplicate-race') {
+  if (
+    scenario !== 'purchase-load' &&
+    scenario !== 'oversell' &&
+    scenario !== 'duplicate-race' &&
+    scenario !== 'high-volume'
+  ) {
     throw new Error(
-      `Unsupported --scenario: ${String(scenario)}. Expected purchase-load | oversell | duplicate-race`,
+      `Unsupported --scenario: ${String(scenario)}. Expected purchase-load | oversell | duplicate-race | high-volume`,
     );
   }
 
