@@ -1,8 +1,9 @@
-export const PROFILES = {
-  full: { attempts: 10000, vus: 100 },
-  smoke: { attempts: 100, vus: 10 },
-  standard: { attempts: 1000, vus: 50 },
-};
+const profilesFile = __ENV.STRESS_PROFILES_FILE;
+if (!profilesFile) {
+  throw new Error('STRESS_PROFILES_FILE is required');
+}
+
+const PROFILES = JSON.parse(open(profilesFile));
 
 export function resolveProfile(name) {
   const key = name || 'smoke';

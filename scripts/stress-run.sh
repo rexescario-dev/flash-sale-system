@@ -51,6 +51,8 @@ Options:
   --profile <name>    Intensity profile (default: smoke)
   --stock <n>         Accepted for stress:test UX; ignored by k6 run
 
+Profiles are loaded from tests/stress/shared/profiles.json via STRESS_PROFILES_FILE.
+
 Environment (optional, passed through to k6 via -e as metadata/URLs only):
   GRAPHQL_URL           default http://localhost:3000/graphql
   LIMITER_PROFILE       summary metadata only (default: correctness) —
@@ -91,6 +93,7 @@ if ! command -v k6 >/dev/null 2>&1; then
   exit 1
 fi
 
+STRESS_PROFILES_FILE="$ROOT/tests/stress/shared/profiles.json"
 STRESS_STATE_FILE="$ROOT/tests/stress/.state/${SCENARIO}.json"
 RESULTS_DIR="$ROOT/tests/stress/results/${SCENARIO}-${PROFILE}"
 mkdir -p "$RESULTS_DIR"
@@ -107,6 +110,7 @@ echo "  summary: $STRESS_SUMMARY_PATH"
 
 # k6 does NOT inherit shell env into __ENV — pass every needed var with -e.
 exec k6 run \
+  -e "STRESS_PROFILES_FILE=${STRESS_PROFILES_FILE}" \
   -e "STRESS_STATE_FILE=${STRESS_STATE_FILE}" \
   -e "STRESS_SUMMARY_PATH=${STRESS_SUMMARY_PATH}" \
   -e "PROFILE=${PROFILE}" \

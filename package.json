@@ -17,6 +17,7 @@
     "e2e": "pnpm --filter @flash-sale/e2e test:e2e",
     "e2e:smoke": "pnpm --filter @flash-sale/e2e test:smoke",
     "stress:seed": "pnpm --filter api exec tsx ../../tests/stress/seeder/cli.ts",
+    "stress:stock": "pnpm exec tsx tests/stress/lib/resolve-comfortable-stock.ts",
     "stress:run": "bash scripts/stress-run.sh",
     "stress:verify": "pnpm --filter api exec tsx ../../tests/stress/verifier/cli.ts",
     "stress:test": "bash scripts/stress-test.sh"
@@ -31,6 +32,7 @@
     ]
   },
   "devDependencies": {
+    "tsx": "^4.23.1",
     "eslint": "^9.29.0",
     "husky": "^9.1.7",
     "lint-staged": "^16.1.2",
