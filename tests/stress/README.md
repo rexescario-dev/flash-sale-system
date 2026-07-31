@@ -11,13 +11,14 @@ Privileged Prisma seed → k6 GraphQL `purchaseItem` → Prisma verify.
 
 ## Runnable scenarios
 
-| Scenario        | Issue | Notes                                                             |
-| --------------- | ----- | ----------------------------------------------------------------- |
-| `harness-smoke` | #53   | Harness proof; comfortable default seed stock is fine for `smoke` |
-| `purchase-load` | #54   | Baseline concurrent purchase load (strict all-success)            |
-| `oversell`      | #55   | Limited inventory / oversell (`0 < purchase_success <= stock`)    |
+| Scenario         | Issue | Notes                                                             |
+| ---------------- | ----- | ----------------------------------------------------------------- |
+| `harness-smoke`  | #53   | Harness proof; comfortable default seed stock is fine for `smoke` |
+| `purchase-load`  | #54   | Baseline concurrent purchase load (strict all-success)            |
+| `oversell`       | #55   | Limited inventory / oversell (`0 < purchase_success <= stock`)    |
+| `duplicate-race` | #56   | Same-user race (`SUCCESS=1`, `DUPLICATE=N-1`)                     |
 
-Other scenario names may be seeded for later issues, but `pnpm stress:run` / `stress:test` will fail until those scripts land (#56–#57).
+Other scenario names may be seeded for later issues, but `pnpm stress:run` / `stress:test` will fail until those scripts land (#57).
 
 ## Commands (repo root)
 
@@ -31,14 +32,18 @@ pnpm stress:test -- --scenario purchase-load --profile smoke
 
 # #55 limited inventory (constrained stock auto-resolved)
 pnpm stress:test -- --scenario oversell --profile smoke
+
+# #56 same-user / duplicate-race (constant stock 10 auto-resolved)
+pnpm stress:test -- --scenario duplicate-race --profile smoke
 ```
 
 Stock policy via shared profiles + `resolveStock(profile, scenario)`:
 
-| Scenario        | Formula (internal)                          | smoke / standard / full |
-| --------------- | ------------------------------------------- | ----------------------- |
-| `purchase-load` | `max(1000, ceil(attempts * 1.2))`           | 1000 / 1200 / 12000     |
-| `oversell`      | `min(100, max(10, floor(attempts * 0.10)))` | 10 / 100 / 100          |
+| Scenario         | Formula (internal)                          | smoke / standard / full |
+| ---------------- | ------------------------------------------- | ----------------------- |
+| `purchase-load`  | `max(1000, ceil(attempts * 1.2))`           | 1000 / 1200 / 12000     |
+| `oversell`       | `min(100, max(10, floor(attempts * 0.10)))` | 10 / 100 / 100          |
+| `duplicate-race` | constant `10` (profile-independent)         | 10 / 10 / 10            |
 
 ### Split path
 
@@ -48,6 +53,8 @@ pnpm stress:seed -- --scenario oversell --stock "$STOCK"
 pnpm stress:run -- --scenario oversell --profile standard
 pnpm stress:verify -- --scenario oversell --profile standard
 ```
+
+Same pattern for `duplicate-race` — e.g. `pnpm --silent stress:stock --profile=smoke --scenario=duplicate-race`.
 
 Bare `pnpm --silent stress:stock <profile>` still resolves **purchase-load** comfortable stock (compat).
 
@@ -61,11 +68,13 @@ pnpm stress:test -- --scenario harness-smoke --profile smoke
 
 `stress:test` exits non-zero if k6 fails or the verifier reports invariant violations.
 Unused stock on oversell is an informational warning (exit 0) when correctness gates pass.
+Leftover stock on `duplicate-race` is expected (no exhaustion warning); correctness limiter required.
 `stress:verify` requires `results/<scenario>-<profile>/k6-summary.json` by default (dual oracle).
 
 ## Design
 
 See [EPIC-07 design spec](../../docs/superpowers/specs/2026-07-31-epic-07-performance-stress-testing-design.md),
 [#54 design](../../docs/superpowers/specs/2026-07-31-issue-54-flash-sale-load-test-design.md),
-and [#55 design](../../docs/superpowers/specs/2026-07-31-issue-55-limited-inventory-concurrency-test-design.md).
+[#55 design](../../docs/superpowers/specs/2026-07-31-issue-55-limited-inventory-concurrency-test-design.md),
+and [#56 design](../../docs/superpowers/specs/2026-07-31-issue-56-same-user-concurrency-test-design.md).
 Results narrative hub lands with #60.
