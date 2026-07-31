@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { comfortableStock, resolveComfortableStock } from './comfortable-stock';
+import {
+  comfortableStock,
+  constrainedStock,
+  resolveComfortableStock,
+  resolveStock,
+} from './comfortable-stock';
 
 describe('comfortableStock', () => {
   it('never returns less than the generic seeder default (1000)', () => {
@@ -19,6 +24,19 @@ describe('comfortableStock', () => {
   });
 });
 
+describe('constrainedStock', () => {
+  it('uses 10% of attempts clamped to [10, 100]', () => {
+    assert.equal(constrainedStock(100), 10);
+    assert.equal(constrainedStock(1000), 100);
+    assert.equal(constrainedStock(10000), 100);
+  });
+
+  it('floors fractional products before clamp', () => {
+    assert.equal(constrainedStock(199), 19); // floor(19.9)
+    assert.equal(constrainedStock(50), 10); // max(10, floor(5))
+  });
+});
+
 describe('resolveComfortableStock', () => {
   it('maps smoke / standard / full via shared profiles', () => {
     assert.equal(resolveComfortableStock('smoke'), 1000);
@@ -28,5 +46,24 @@ describe('resolveComfortableStock', () => {
 
   it('rejects unknown profiles', () => {
     assert.throws(() => resolveComfortableStock('nope'), /Unknown profile/);
+  });
+});
+
+describe('resolveStock', () => {
+  it('routes purchase-load to comfortable stock', () => {
+    assert.equal(resolveStock('smoke', 'purchase-load'), 1000);
+    assert.equal(resolveStock('standard', 'purchase-load'), 1200);
+    assert.equal(resolveStock('full', 'purchase-load'), 12000);
+  });
+
+  it('routes oversell to constrained stock', () => {
+    assert.equal(resolveStock('smoke', 'oversell'), 10);
+    assert.equal(resolveStock('standard', 'oversell'), 100);
+    assert.equal(resolveStock('full', 'oversell'), 100);
+  });
+
+  it('rejects unknown profiles and unsupported scenarios', () => {
+    assert.throws(() => resolveStock('nope', 'oversell'), /Unknown profile/);
+    assert.throws(() => resolveStock('smoke', 'duplicate-race'), /Unsupported scenario/);
   });
 });

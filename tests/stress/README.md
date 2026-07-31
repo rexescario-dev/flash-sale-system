@@ -15,31 +15,43 @@ Privileged Prisma seed → k6 GraphQL `purchaseItem` → Prisma verify.
 | --------------- | ----- | ----------------------------------------------------------------- |
 | `harness-smoke` | #53   | Harness proof; comfortable default seed stock is fine for `smoke` |
 | `purchase-load` | #54   | Baseline concurrent purchase load (strict all-success)            |
+| `oversell`      | #55   | Limited inventory / oversell (`0 < purchase_success <= stock`)    |
 
-Other scenario names may be seeded for later issues, but `pnpm stress:run` / `stress:test` will fail until those scripts land (#55–#57).
+Other scenario names may be seeded for later issues, but `pnpm stress:run` / `stress:test` will fail until those scripts land (#56–#57).
 
 ## Commands (repo root)
 
-### Primary path (`purchase-load`)
+`stress:test` remains the recommended entry point; split-path commands are documented primarily for debugging and advanced workflows.
 
-`stress:test` resolves comfortable stock from the shared profile SoT when `--stock` is omitted:
+### Primary path
 
 ```bash
+# #54 baseline (comfortable stock auto-resolved)
 pnpm stress:test -- --scenario purchase-load --profile smoke
+
+# #55 limited inventory (constrained stock auto-resolved)
+pnpm stress:test -- --scenario oversell --profile smoke
 ```
 
-Comfortable stock formula: `max(1000, ceil(attempts * 1.2))` (smoke → 1000, standard → 1200, full → 12000).
+Stock policy via shared profiles + `resolveStock(profile, scenario)`:
 
-### Split path (`purchase-load`)
+| Scenario        | Formula (internal)                          | smoke / standard / full |
+| --------------- | ------------------------------------------- | ----------------------- |
+| `purchase-load` | `max(1000, ceil(attempts * 1.2))`           | 1000 / 1200 / 12000     |
+| `oversell`      | `min(100, max(10, floor(attempts * 0.10)))` | 10 / 100 / 100          |
+
+### Split path
 
 ```bash
-STOCK=$(pnpm --silent stress:stock standard)
-pnpm stress:seed -- --scenario purchase-load --stock "$STOCK"
-pnpm stress:run -- --scenario purchase-load --profile standard
-pnpm stress:verify -- --scenario purchase-load --profile standard
+STOCK=$(pnpm --silent stress:stock --profile=standard --scenario=oversell)
+pnpm stress:seed -- --scenario oversell --stock "$STOCK"
+pnpm stress:run -- --scenario oversell --profile standard
+pnpm stress:verify -- --scenario oversell --profile standard
 ```
 
-Omitting `--stock` for high-intensity profiles changes the scenario from a comfortable-stock baseline into a stock-constrained run and therefore invalidates the #54 success criteria.
+Bare `pnpm --silent stress:stock <profile>` still resolves **purchase-load** comfortable stock (compat).
+
+Running `stress:seed` directly without a resolver-derived `--stock` seeds the generic default (1000), which may prevent the oversell scenario from exercising constrained inventory. **Prefer `stress:test`** (or an explicit resolver-derived `--stock`).
 
 ### Harness smoke
 
@@ -47,11 +59,13 @@ Omitting `--stock` for high-intensity profiles changes the scenario from a comfo
 pnpm stress:test -- --scenario harness-smoke --profile smoke
 ```
 
-`stress:test` exits non-zero if k6 fails or the verifier reports invariant violations.  
+`stress:test` exits non-zero if k6 fails or the verifier reports invariant violations.
+Unused stock on oversell is an informational warning (exit 0) when correctness gates pass.
 `stress:verify` requires `results/<scenario>-<profile>/k6-summary.json` by default (dual oracle).
 
 ## Design
 
-See [EPIC-07 design spec](../../docs/superpowers/specs/2026-07-31-epic-07-performance-stress-testing-design.md)
-and [#54 design](../../docs/superpowers/specs/2026-07-31-issue-54-flash-sale-load-test-design.md).
+See [EPIC-07 design spec](../../docs/superpowers/specs/2026-07-31-epic-07-performance-stress-testing-design.md),
+[#54 design](../../docs/superpowers/specs/2026-07-31-issue-54-flash-sale-load-test-design.md),
+and [#55 design](../../docs/superpowers/specs/2026-07-31-issue-55-limited-inventory-concurrency-test-design.md).
 Results narrative hub lands with #60.
