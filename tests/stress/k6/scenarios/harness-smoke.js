@@ -2,7 +2,7 @@ import { check } from 'k6';
 
 import { classifyPurchaseResponse } from '../helpers/classify.js';
 import { graphqlRequest, PURCHASE_ITEM } from '../helpers/graphql.js';
-import { buildHandleSummary, recordBucket } from '../helpers/metrics.js';
+import { buildHandleSummary, recordBucket, SUMMARY_TREND_STATS } from '../helpers/metrics.js';
 import { resolveProfile } from '../helpers/profiles.js';
 import { loadState } from '../helpers/state.js';
 
@@ -10,6 +10,7 @@ const profile = resolveProfile(__ENV.PROFILE);
 const graphqlUrl = __ENV.GRAPHQL_URL || 'http://localhost:3000/graphql';
 const limiterProfile = __ENV.LIMITER_PROFILE || 'correctness';
 const environment = __ENV.STRESS_ENVIRONMENT || 'local';
+const startedAt = new Date().toISOString();
 
 // open() is init-context only — load here; setup() returns the VU-facing slice.
 const seededState = loadState();
@@ -22,6 +23,7 @@ export const options = {
       vus: profile.vus,
     },
   },
+  summaryTrendStats: SUMMARY_TREND_STATS,
   thresholds: {
     purchase_rate_limited: ['count==0'],
     // Harness proof: must exercise GraphQL successfully (comfortable stock +
@@ -59,10 +61,12 @@ export default function (data) {
 
 export function handleSummary(data) {
   const enrich = buildHandleSummary({
+    attempts: profile.attempts,
     environment,
     limiterProfile,
     profile: profile.name,
     scenario: 'harness-smoke',
+    startedAt,
   });
   const summary = enrich(data);
   const json = JSON.stringify(summary, null, 2);

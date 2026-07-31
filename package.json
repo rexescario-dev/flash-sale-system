@@ -21,6 +21,7 @@
     "stress:policy": "pnpm exec tsx tests/stress/lib/resolve-scenario-policy.ts",
     "stress:run": "bash scripts/stress-run.sh",
     "stress:verify": "pnpm --filter api exec tsx ../../tests/stress/verifier/cli.ts",
+    "stress:report": "pnpm exec tsx tests/stress/reporter/cli.ts",
     "stress:test": "bash scripts/stress-test.sh"
   },
   "lint-staged": {

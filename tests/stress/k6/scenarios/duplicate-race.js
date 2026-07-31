@@ -2,7 +2,7 @@ import { check } from 'k6';
 
 import { classifyPurchaseResponse } from '../helpers/classify.js';
 import { graphqlRequest, PURCHASE_ITEM } from '../helpers/graphql.js';
-import { buildHandleSummary, recordBucket } from '../helpers/metrics.js';
+import { buildHandleSummary, recordBucket, SUMMARY_TREND_STATS } from '../helpers/metrics.js';
 import { resolveProfile } from '../helpers/profiles.js';
 import { loadState } from '../helpers/state.js';
 
@@ -10,6 +10,7 @@ const profile = resolveProfile(__ENV.PROFILE);
 const graphqlUrl = __ENV.GRAPHQL_URL || 'http://localhost:3000/graphql';
 const limiterProfile = __ENV.LIMITER_PROFILE || 'correctness';
 const environment = __ENV.STRESS_ENVIRONMENT || 'local';
+const startedAt = new Date().toISOString();
 
 const seededState = loadState();
 const stock = seededState.stock;
@@ -27,6 +28,7 @@ export const options = {
       vus: profile.vus,
     },
   },
+  summaryTrendStats: SUMMARY_TREND_STATS,
   thresholds: {
     purchase_duplicate: [`count==${attempts - 1}`],
     purchase_rate_limited: ['count==0'],
@@ -63,35 +65,20 @@ export default function (data) {
 
 export function handleSummary(data) {
   const enrich = buildHandleSummary({
+    attempts,
     environment,
     limiterProfile,
     profile: profile.name,
     scenario: 'duplicate-race',
+    startedAt,
   });
   const base = enrich(data);
-  const c = base.counters;
-  const purchaseSuccess = c.purchase_success ?? 0;
-  const purchaseDuplicate = c.purchase_duplicate ?? 0;
-  const purchaseSoldOut = c.purchase_sold_out ?? 0;
-  const purchaseRateLimited = c.purchase_rate_limited ?? 0;
-  const purchaseUnexpected = c.purchase_unexpected ?? 0;
-  const classifiedTotal =
-    purchaseSuccess +
-    purchaseDuplicate +
-    purchaseSoldOut +
-    purchaseRateLimited +
-    purchaseUnexpected;
-  // The five exact thresholds imply the accounting invariant;
-  // accountingOk is retained solely as a diagnostic field.
-  const accountingOk = classifiedTotal === attempts;
+  const purchaseSuccess = base.counters.purchase_success ?? 0;
   const unusedStock = Math.max(0, stock - purchaseSuccess);
 
   const summary = {
     ...base,
     fixedUserId: seededState.fixedUserId,
-    accountingOk,
-    attempts,
-    classifiedTotal,
     purchaseSuccess,
     stock,
     unusedStock,

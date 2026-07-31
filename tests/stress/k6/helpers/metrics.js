@@ -1,5 +1,14 @@
 import { Counter } from 'k6/metrics';
 
+import {
+  buildSharedDiagnostics,
+  extractPerformance,
+  getMetricCount,
+  SUMMARY_TREND_STATS,
+} from './summary-fields.js';
+
+export { SUMMARY_TREND_STATS };
+
 export const purchaseSuccess = new Counter('purchase_success');
 export const purchaseSoldOut = new Counter('purchase_sold_out');
 export const purchaseDuplicate = new Counter('purchase_duplicate');
@@ -30,35 +39,39 @@ export function recordBucket(bucket) {
   }
 }
 
-function metricCount(data, name) {
-  const m = data && data.metrics ? data.metrics[name] : undefined;
-  if (!m || !m.values) return 0;
-  if (typeof m.values.count === 'number') return m.values.count;
-  return 0;
-}
-
 /**
- * Returns a handleSummary-compatible builder that embeds metadata + counters
- * into a JSON summary object for later #58 / verifier consumption.
+ * Canonical base summary for all runnable scenarios.
+ * Scenario-specific fields must be spread on by the caller (additive only).
  *
- * @param {{ scenario: string, profile: string, limiterProfile: string, environment: string }} meta
+ * @param {{ scenario: string, profile: string, limiterProfile: string, environment: string, attempts: number, startedAt: string }} meta
  * @returns {(data: object) => object}
  */
-export function buildHandleSummary({ environment, limiterProfile, profile, scenario }) {
+export function buildHandleSummary({
+  attempts,
+  environment,
+  limiterProfile,
+  profile,
+  scenario,
+  startedAt,
+}) {
   return function enrichSummary(data) {
+    const counters = {
+      purchase_duplicate: getMetricCount(data, 'purchase_duplicate'),
+      purchase_rate_limited: getMetricCount(data, 'purchase_rate_limited'),
+      purchase_sold_out: getMetricCount(data, 'purchase_sold_out'),
+      purchase_success: getMetricCount(data, 'purchase_success'),
+      purchase_unexpected: getMetricCount(data, 'purchase_unexpected'),
+    };
+    const diagnostics = buildSharedDiagnostics(counters, attempts);
     return {
-      counters: {
-        purchase_duplicate: metricCount(data, 'purchase_duplicate'),
-        purchase_rate_limited: metricCount(data, 'purchase_rate_limited'),
-        purchase_sold_out: metricCount(data, 'purchase_sold_out'),
-        purchase_success: metricCount(data, 'purchase_success'),
-        purchase_unexpected: metricCount(data, 'purchase_unexpected'),
-      },
+      counters,
       environment,
       limiterProfile,
+      performance: extractPerformance(data),
       profile,
       scenario,
-      startedAt: new Date().toISOString(),
+      startedAt,
+      ...diagnostics,
     };
   };
 }

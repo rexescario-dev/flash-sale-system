@@ -2,7 +2,7 @@ import { check } from 'k6';
 
 import { classifyPurchaseResponse } from '../helpers/classify.js';
 import { graphqlRequest, PURCHASE_ITEM } from '../helpers/graphql.js';
-import { buildHandleSummary, recordBucket } from '../helpers/metrics.js';
+import { buildHandleSummary, recordBucket, SUMMARY_TREND_STATS } from '../helpers/metrics.js';
 import { resolveProfile } from '../helpers/profiles.js';
 import { loadState } from '../helpers/state.js';
 
@@ -10,6 +10,7 @@ const profile = resolveProfile(__ENV.PROFILE);
 const graphqlUrl = __ENV.GRAPHQL_URL || 'http://localhost:3000/graphql';
 const limiterProfile = __ENV.LIMITER_PROFILE || 'correctness';
 const environment = __ENV.STRESS_ENVIRONMENT || 'local';
+const startedAt = new Date().toISOString();
 
 // Stock is immutable input from seed state — never recalculated from profile here.
 const seededState = loadState();
@@ -23,6 +24,7 @@ export const options = {
       vus: profile.vus,
     },
   },
+  summaryTrendStats: SUMMARY_TREND_STATS,
   thresholds: {
     purchase_duplicate: ['count==0'],
     purchase_rate_limited: ['count==0'],
@@ -60,10 +62,12 @@ export default function (data) {
 
 export function handleSummary(data) {
   const enrich = buildHandleSummary({
+    attempts: profile.attempts,
     environment,
     limiterProfile,
     profile: profile.name,
     scenario: 'oversell',
+    startedAt,
   });
   const base = enrich(data);
   const purchaseSuccess = base.counters.purchase_success ?? 0;
