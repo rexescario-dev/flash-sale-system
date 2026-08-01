@@ -243,7 +243,7 @@ Notes:
 
 - Each check is wrapped so every registered check contributes a result even if one throws.
 - Empty registry ⇒ `every` on `[]` is `true` ⇒ `ok` + `checks: {}`.
-- `@Optional()` + missing providers ⇒ `undefined` ⇒ treat as `[]`. Nest `multi: true` injects an array when providers exist; normalize a single instance for unit tests that pass one fake.
+- `@Optional()` + missing providers ⇒ `undefined` ⇒ treat as `[]`. Nest has no Angular-style `multi: true`; normalize a single injected instance (or an array) for unit tests and for #78's single `useExisting` registration. Multi-check aggregation is deferred to #79 design.
 
 - [ ] **Step 4: Run tests to verify they pass**
 

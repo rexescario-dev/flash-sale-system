@@ -104,14 +104,14 @@ Satisfied when:
 
 Stay under `apps/api/src/health/`, following the repo’s Symbol-token + `@Inject` pattern.
 
-| Unit                            | Responsibility                                                                                                                                                                                                        |
-| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `HealthCheckResult`             | `{ status: string }` — port result object (allows later metadata without changing callers)                                                                                                                            |
-| `HealthCheck`                   | `readonly name: string`; `check(): Promise<HealthCheckResult>`                                                                                                                                                        |
-| `HEALTH_CHECKS` injection token | Provides an optional collection of registered `HealthCheck` implementations. When none are registered, the service treats the collection as empty.                                                                    |
-| `HealthService`                 | `getLiveness()` → frozen `{ status: 'ok' }`. `getReadiness()` → execute all checks concurrently (wrapping each so every check contributes a result even if one throws), build `checks`, set top-level `ok` / `error`. |
-| `HealthController`              | Contains no health evaluation logic; delegates entirely to `HealthService` and maps the returned top-level status to the HTTP status code (`ok` → 200, `error` → 503).                                                |
-| `HealthModule`                  | Wires controller + service. Does not register `HEALTH_CHECKS` providers in #77 (optional inject ⇒ empty collection). Does **not** import Prisma/Redis.                                                                |
+| Unit                            | Responsibility                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `HealthCheckResult`             | `{ status: string }` — port result object (allows later metadata without changing callers)                                                                                                                                                                                                                                                                                                                                           |
+| `HealthCheck`                   | `readonly name: string`; `check(): Promise<HealthCheckResult>`                                                                                                                                                                                                                                                                                                                                                                       |
+| `HEALTH_CHECKS` injection token | Nest DI provider registration for readiness checks. When none are registered, the optional inject is treated as empty. For the first real check (#78) this resolves to a single `HealthCheck`; `HealthService` already normalizes a single instance to an array. Multi-check aggregation will be finalized when additional checks (for example Redis in #79) are introduced — Nest has no Angular-style `multi: true` on `Provider`. |
+| `HealthService`                 | `getLiveness()` → frozen `{ status: 'ok' }`. `getReadiness()` → execute all checks concurrently (wrapping each so every check contributes a result even if one throws), build `checks`, set top-level `ok` / `error`.                                                                                                                                                                                                                |
+| `HealthController`              | Contains no health evaluation logic; delegates entirely to `HealthService` and maps the returned top-level status to the HTTP status code (`ok` → 200, `error` → 503).                                                                                                                                                                                                                                                               |
+| `HealthModule`                  | Wires controller + service. Does not register `HEALTH_CHECKS` providers in #77 (optional inject ⇒ empty collection). Does **not** import Prisma/Redis.                                                                                                                                                                                                                                                                               |
 
 ### Readiness data flow
 
@@ -160,11 +160,11 @@ Document the existence and purpose of `GET /health/ready`; do not rewrite operat
 
 ## Follow-on issues
 
-| Issue         | Role after #77                                                                          |
-| ------------- | --------------------------------------------------------------------------------------- |
-| #78           | Register `DatabaseHealthCheck` using the reserved `up` / `down` check status vocabulary |
-| #79           | Register `RedisHealthCheck` without failing purchases incorrectly                       |
-| #75–#76 / #80 | Separate logging / correlation / metrics track                                          |
+| Issue         | Role after #77                                                                                                                                                                 |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| #78           | Register `DatabaseHealthCheck` using the reserved `up` / `down` check status vocabulary (Nest `HEALTH_CHECKS` `useExisting`; single-instance normalization in `HealthService`) |
+| #79           | Register `RedisHealthCheck` and finalize Nest-native multi-check aggregation (no Angular-style `multi: true`)                                                                  |
+| #75–#76 / #80 | Separate logging / correlation / metrics track                                                                                                                                 |
 
 ## Definition of Done
 
