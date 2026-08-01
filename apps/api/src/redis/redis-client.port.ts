@@ -6,5 +6,6 @@ export type RedisClientPort = {
    * Must never leave a key without TTL after the first successful increment.
    */
   incrWithExpiryOnFirst(key: string, ttlSeconds: number): Promise<number>;
+  ping(): Promise<void>;
   set(key: string, value: string, ttlSeconds: number): Promise<void>;
 };

@@ -69,6 +69,10 @@ export class IoredisRedisClientAdapter implements OnModuleDestroy, OnModuleInit,
     }
   }
 
+  async ping(): Promise<void> {
+    await this.client.ping();
+  }
+
   async set(key: string, value: string, ttlSeconds: number): Promise<void> {
     await this.client.set(key, value, 'EX', ttlSeconds);
   }

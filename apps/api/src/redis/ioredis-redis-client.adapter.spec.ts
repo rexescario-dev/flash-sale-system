@@ -68,4 +68,35 @@ describe('IoredisRedisClientAdapter', () => {
       }),
     );
   });
+
+  it('ping resolves when the Redis client ping resolves', async () => {
+    const client = {
+      connect: jest.fn().mockResolvedValue(undefined),
+      on: jest.fn(),
+      ping: jest.fn().mockResolvedValue('PONG'),
+      quit: jest.fn().mockResolvedValue('OK'),
+    };
+    MockRedis.mockImplementation(() => client as never);
+
+    const adapter = createAdapter();
+    await adapter.onModuleInit();
+
+    await expect(adapter.ping()).resolves.toBeUndefined();
+    expect(client.ping).toHaveBeenCalledTimes(1);
+  });
+
+  it('ping rejects when the Redis client ping rejects', async () => {
+    const client = {
+      connect: jest.fn().mockResolvedValue(undefined),
+      on: jest.fn(),
+      ping: jest.fn().mockRejectedValue(new Error('redis unreachable')),
+      quit: jest.fn().mockResolvedValue('OK'),
+    };
+    MockRedis.mockImplementation(() => client as never);
+
+    const adapter = createAdapter();
+    await adapter.onModuleInit();
+
+    await expect(adapter.ping()).rejects.toThrow('redis unreachable');
+  });
 });

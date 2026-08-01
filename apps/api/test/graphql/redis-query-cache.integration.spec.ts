@@ -54,6 +54,9 @@ const failingRedisClient: RedisClientPort = {
   async incrWithExpiryOnFirst() {
     throw new Error('redis down');
   },
+  async ping() {
+    throw new Error('redis down');
+  },
   async set() {
     throw new Error('redis down');
   },
