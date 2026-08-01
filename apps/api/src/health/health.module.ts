@@ -11,7 +11,6 @@ import { HEALTH_CHECKS } from './health.tokens';
     DatabaseHealthCheck,
     HealthService,
     {
-      multi: true,
       provide: HEALTH_CHECKS,
       useExisting: DatabaseHealthCheck,
     },

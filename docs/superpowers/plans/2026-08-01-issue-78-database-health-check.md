@@ -4,9 +4,9 @@
 
 **Goal:** Register a PostgreSQL `DatabaseHealthCheck` on the `#77` `HEALTH_CHECKS` seam so `GET /health/ready` reports `checks.database` as `up`/`down` without changing liveness, routes, or the controller.
 
-**Architecture:** Injectable `DatabaseHealthCheck` in `apps/api/src/health/` probes via global `PrismaService` (`SELECT 1`). `HealthModule` registers it with `{ provide: HEALTH_CHECKS, useExisting: DatabaseHealthCheck, multi: true }`. Failures bubble; `HealthService` remains the sole normalizer to `down`.
+**Architecture:** Injectable `DatabaseHealthCheck` in `apps/api/src/health/` probes via global `PrismaService` (`SELECT 1`). `HealthModule` registers it with `{ provide: HEALTH_CHECKS, useExisting: DatabaseHealthCheck }` (Nest DI; no Angular-style `multi: true`). Failures bubble; `HealthService` remains the sole normalizer to `down`.
 
-**Tech Stack:** NestJS 11, Prisma Client (`$queryRaw`), existing Jest unit tests under `apps/api`, Symbol multi-provider injection (`HEALTH_CHECKS`).
+**Tech Stack:** NestJS 11, Prisma Client (`$queryRaw`), existing Jest unit tests under `apps/api`, Symbol token injection (`HEALTH_CHECKS`).
 
 **Base:** `main` at `#77` merge tip (`bc9fdde` / PR `#167` or later).
 
@@ -26,18 +26,18 @@
 
 ## File map
 
-| File                                                                         | Responsibility                                     |
-| ---------------------------------------------------------------------------- | -------------------------------------------------- |
-| `apps/api/src/health/database.health-check.ts`                               | **Create** — `DatabaseHealthCheck` (`HealthCheck`) |
-| `apps/api/src/health/database.health-check.spec.ts`                          | **Create** — unit tests (name / up / reject)       |
-| `apps/api/src/health/health.module.ts`                                       | Register check + `HEALTH_CHECKS` multi binding     |
-| `apps/api/src/health/health-check.port.ts`                                   | Unchanged — existing `#77` port                    |
-| `apps/api/src/health/health.tokens.ts`                                       | Unchanged — `HEALTH_CHECKS`                        |
-| `apps/api/src/health/health.service.ts`                                      | Unchanged — aggregation / throw → `down`           |
-| `apps/api/src/health/health.controller.ts`                                   | Unchanged — HTTP mapping only                      |
-| `apps/api/src/prisma/prisma.module.ts`                                       | Unchanged — sole `PrismaService` provider          |
-| `docs/superpowers/specs/2026-08-01-issue-78-database-health-check-design.md` | Approved design                                    |
-| `docs/superpowers/plans/2026-08-01-issue-78-database-health-check.md`        | This plan                                          |
+| File                                                                         | Responsibility                                         |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------ |
+| `apps/api/src/health/database.health-check.ts`                               | **Create** — `DatabaseHealthCheck` (`HealthCheck`)     |
+| `apps/api/src/health/database.health-check.spec.ts`                          | **Create** — unit tests (name / up / reject)           |
+| `apps/api/src/health/health.module.ts`                                       | Register check + `HEALTH_CHECKS` `useExisting` binding |
+| `apps/api/src/health/health-check.port.ts`                                   | Unchanged — existing `#77` port                        |
+| `apps/api/src/health/health.tokens.ts`                                       | Unchanged — `HEALTH_CHECKS`                            |
+| `apps/api/src/health/health.service.ts`                                      | Unchanged — aggregation / throw → `down`               |
+| `apps/api/src/health/health.controller.ts`                                   | Unchanged — HTTP mapping only                          |
+| `apps/api/src/prisma/prisma.module.ts`                                       | Unchanged — sole `PrismaService` provider              |
+| `docs/superpowers/specs/2026-08-01-issue-78-database-health-check-design.md` | Approved design                                        |
+| `docs/superpowers/plans/2026-08-01-issue-78-database-health-check.md`        | This plan                                              |
 
 **Frozen:** `GET /health` response `{ "status": "ok" }`; controller/routes; CI/`wait-on`/Playwright/`E2E_API_HEALTH_URL` defaults; GraphQL surface; Redis probe (#79); Terminus; logging/metrics (#75/#76/#80); EPIC-07 stress contracts/results; `#134` CSS AC; second `PrismaService` in `HealthModule`.
 
@@ -220,7 +220,6 @@ import { HEALTH_CHECKS } from './health.tokens';
     DatabaseHealthCheck,
     HealthService,
     {
-      multi: true,
       provide: HEALTH_CHECKS,
       useExisting: DatabaseHealthCheck,
     },
@@ -229,7 +228,7 @@ import { HEALTH_CHECKS } from './health.tokens';
 export class HealthModule {}
 ```
 
-If ESLint requires a different key/member order inside the provider object or `providers` array, adjust only for lint — keep `multi: true`, `provide: HEALTH_CHECKS`, and `useExisting: DatabaseHealthCheck`.
+If ESLint requires a different key/member order inside the provider object or `providers` array, adjust only for lint — keep `provide: HEALTH_CHECKS` and `useExisting: DatabaseHealthCheck`. Do **not** add Angular-style `multi: true` (unsupported on Nest `Provider`).
 
 - [ ] **Step 2: Confirm existing health + new unit tests still pass**
 
@@ -319,19 +318,19 @@ EOF
 
 ## Spec coverage (self-review)
 
-| Spec requirement                                                                  | Task                                             |
-| --------------------------------------------------------------------------------- | ------------------------------------------------ |
-| `DatabaseHealthCheck` implements `HealthCheck`, `name: "database"`                | Task 2                                           |
-| Success `{ status: 'up' }` via `SELECT 1`                                         | Task 2                                           |
-| Failures bubble; no local catch/normalize/log                                     | Task 2                                           |
-| Register from `HealthModule` with `HEALTH_CHECKS` + `multi: true` + `useExisting` | Task 3                                           |
-| No second `PrismaService` provider                                                | Task 3 + Task 4 freeze                           |
-| No controller/route/`GET /health` changes                                         | Task 3 + Task 4 freeze                           |
-| Concurrent aggregation inherited from `#77` (no new sequencing)                   | No code change — `HealthService` unchanged       |
-| Unit tests: name / up / reject                                                    | Task 2                                           |
-| No Nest wiring / integration test required                                        | Explicitly omitted                               |
-| No Terminus / Redis / logging / stress / `#134`                                   | Task 4 freeze                                    |
-| Extensibility pattern for future probes                                           | Documented in spec Follow-on; `#79` out of slice |
+| Spec requirement                                                               | Task                                             |
+| ------------------------------------------------------------------------------ | ------------------------------------------------ |
+| `DatabaseHealthCheck` implements `HealthCheck`, `name: "database"`             | Task 2                                           |
+| Success `{ status: 'up' }` via `SELECT 1`                                      | Task 2                                           |
+| Failures bubble; no local catch/normalize/log                                  | Task 2                                           |
+| Register from `HealthModule` with `HEALTH_CHECKS` + `useExisting` (no `multi`) | Task 3                                           |
+| No second `PrismaService` provider                                             | Task 3 + Task 4 freeze                           |
+| No controller/route/`GET /health` changes                                      | Task 3 + Task 4 freeze                           |
+| Concurrent aggregation inherited from `#77` (no new sequencing)                | No code change — `HealthService` unchanged       |
+| Unit tests: name / up / reject                                                 | Task 2                                           |
+| No Nest wiring / integration test required                                     | Explicitly omitted                               |
+| No Terminus / Redis / logging / stress / `#134`                                | Task 4 freeze                                    |
+| Extensibility pattern for future probes                                        | Documented in spec Follow-on; `#79` out of slice |
 
 ## Execution handoff
 

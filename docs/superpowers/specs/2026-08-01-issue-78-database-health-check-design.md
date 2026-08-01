@@ -20,7 +20,7 @@ GitHub AC: **Health includes PostgreSQL connectivity.**
 Satisfied when:
 
 1. A `DatabaseHealthCheck` implements the existing `HealthCheck` port with `name: "database"`.
-2. It is registered via `HEALTH_CHECKS` (`multi: true`) from `HealthModule`.
+2. It is registered via Nest DI `HEALTH_CHECKS` provider registration from `HealthModule` (`useExisting: DatabaseHealthCheck`).
 3. On successful probe, readiness includes `"database": "up"` and can still return top-level `"status": "ok"` (HTTP 200) when every registered check is `up`.
 4. On probe failure (reject/throw), `HealthService` aggregation records `"database": "down"` and readiness returns top-level `"status": "error"` (HTTP 503) — using the existing #77 normalization path.
 5. `GET /health` liveness contract is unchanged (`{ "status": "ok" }`, HTTP 200).
@@ -33,7 +33,7 @@ Satisfied when:
 | Unit                                  | Role                                                                                            |
 | ------------------------------------- | ----------------------------------------------------------------------------------------------- |
 | `DatabaseHealthCheck`                 | Injectable `HealthCheck`; probes PostgreSQL via `PrismaService`                                 |
-| `HealthModule`                        | Registers the class and binds it into `HEALTH_CHECKS` with `multi: true`                        |
+| `HealthModule`                        | Registers the class and binds it into `HEALTH_CHECKS` via Nest `useExisting`                    |
 | `PrismaService`                       | Existing global client — `HealthModule` must not declare or instantiate another Prisma provider |
 | `HealthService` / controller / routes | Unchanged from #77                                                                              |
 
@@ -53,7 +53,7 @@ Satisfied when:
 | Ownership        | Health feature owns registration and probe policy                                                                                                                                        |
 | Location         | `apps/api/src/health/database.health-check.ts`                                                                                                                                           |
 | Port contract    | Implements existing `#77` port (`HealthCheck` / `HealthCheckResult` in `health-check.port.ts`); success returns `Promise<HealthCheckResult>` with `{ status: 'up' }`                     |
-| Registration     | `HealthModule` providers: `DatabaseHealthCheck` + `{ provide: HEALTH_CHECKS, useExisting: DatabaseHealthCheck, multi: true }`                                                            |
+| Registration     | `HealthModule` providers: `DatabaseHealthCheck` + `{ provide: HEALTH_CHECKS, useExisting: DatabaseHealthCheck }` (Nest DI; no Angular-style `multi: true`)                               |
 | Prisma wiring    | `HealthModule` relies on the existing global `PrismaService` exported by `PrismaModule`; it must not declare or instantiate another Prisma provider                                      |
 | Check name       | `"database"` (matches #77 illustrative readiness shape)                                                                                                                                  |
 | Probe            | Trivial read-only `await this.prisma.$queryRaw\`SELECT 1\`` — verifies Prisma can obtain a connection and execute SQL; **not** schema or application-data validation                     |
@@ -105,7 +105,7 @@ Stay under `apps/api/src/health/`.
 | Unit                             | Responsibility                                                                                                                                                                     |
 | -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `DatabaseHealthCheck`            | Implements `HealthCheck`; `readonly name = 'database'`; `check()` runs `$queryRaw\`SELECT 1\``and returns`{ status: 'up' }` on success; MUST NOT catch/wrap/log/normalize failures |
-| `HealthModule`                   | Add `DatabaseHealthCheck` provider and `HEALTH_CHECKS` multi binding; leave controller/service providers as in #77; do not provide `PrismaService`                                 |
+| `HealthModule`                   | Add `DatabaseHealthCheck` provider and `HEALTH_CHECKS` `useExisting` binding; leave controller/service providers as in #77; do not provide `PrismaService`                         |
 | `PrismaModule` / `PrismaService` | Unchanged; remain the sole Prisma provider                                                                                                                                         |
 
 ### Dependency direction
@@ -157,12 +157,12 @@ No operational doc rewrite required. Optional thin note next to existing `/healt
 
 ## Follow-on
 
-| Issue         | Role after #78                                                                     |
-| ------------- | ---------------------------------------------------------------------------------- |
-| #79           | Register `RedisHealthCheck` the same way in `HealthModule` (`HEALTH_CHECKS` multi) |
-| #75–#76 / #80 | Separate logging / correlation / metrics track                                     |
+| Issue         | Role after #78                                                                                                                                                                                                                                                                               |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| #79           | Introduce Redis probe **and** finalize Nest-native multi-check aggregation (registry service, factory assembling an array, dynamic module registration, or another Nest-idiomatic approach). Do **not** add a `useFactory` array solely to mimic Angular `multi` binding before that design. |
+| #75–#76 / #80 | Separate logging / correlation / metrics track                                                                                                                                                                                                                                               |
 
-Future infrastructure probes (Redis, external services, etc.) should follow the same pattern: one injectable `HealthCheck` implementation registered through `HEALTH_CHECKS` from `HealthModule`.
+For #78, `HEALTH_CHECKS` resolves to a single `HealthCheck`; `HealthService` already normalizes a single instance to an array. Multi-check aggregation will be finalized when additional checks (for example Redis in #79) are introduced.
 
 ## Definition of Done
 
