@@ -139,7 +139,8 @@ Port and Redis collisions: see [Local development — Troubleshooting](docs/loca
 The customer surface is a GraphQL API served by the NestJS app.
 
 - GraphQL: [http://localhost:3000/graphql](http://localhost:3000/graphql)
-- API health: [http://localhost:3000/health](http://localhost:3000/health)
+- API liveness (REST): [http://localhost:3000/health](http://localhost:3000/health)
+- API readiness (REST): [http://localhost:3000/health/ready](http://localhost:3000/health/ready)
 
 For the modular-monolith topology and request paths, see [Architecture](docs/architecture.md).
 

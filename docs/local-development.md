@@ -137,6 +137,8 @@ After the stack is up (either path), confirm the three local surfaces:
 curl -sf http://localhost:3000/health
 ```
 
+Readiness (dependency checks land in later issues): `GET /health/ready` returns `{ "status": "ok", "checks": {} }` after Nest bootstrap when no checks are registered.
+
 **GraphQL** — expect a successful response (for example `__typename`):
 
 ```bash
