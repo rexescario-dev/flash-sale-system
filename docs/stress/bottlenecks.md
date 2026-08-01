@@ -3,6 +3,8 @@
 Evidence-backed analysis for [EPIC-07 #87](https://github.com/rexescario-dev/flash-sale-system/issues/87) / [#59](https://github.com/rexescario-dev/flash-sale-system/issues/59).
 It consumes the gitignored artifacts under `tests/stress/results/<scenario>-<profile>/`. Metrics in this document come only from `k6-summary.json`; correctness checks come only from `verifier.json`.
 
+Results overview: [docs/stress-testing.md](../stress-testing.md).
+
 ## Scope & Evidence
 
 ### Environment

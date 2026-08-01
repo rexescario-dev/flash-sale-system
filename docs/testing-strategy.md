@@ -15,7 +15,7 @@ Tests are organized in complementary layers:
 1. **Unit** — fast confidence in domain and application logic without real infrastructure.
 2. **Integration** — confidence at system boundaries with real services.
 3. **E2E** — confidence in critical user journeys across the real stack; **smoke** is the smallest Playwright subset of that layer.
-4. **Stress** — planned load/stress validation (not in the automated suite today).
+4. **Stress** — documented load/stress validation ([results](stress-testing.md); not in the required PR automated suite today).
 
 Each layer answers a different question. Higher layers do not replace lower ones, and browser-based E2E is not the concurrency or load harness.
 
@@ -94,9 +94,9 @@ pnpm e2e:smoke
 
 Suite discovery, local smoke execution, CI job usage, and how smoke specs are picked up are documented in [Smoke testing](smoke-testing.md).
 
-## Stress testing (planned)
+## Stress testing
 
-Stress testing is not currently part of the automated test suite. The project currently includes unit, integration, E2E, and smoke testing. Stress/load testing is planned for **EPIC-07 / Issue #71**, where the k6-based strategy, scenarios, execution instructions, and CI integration will be introduced. This document intentionally does not include k6 commands or expected results before that work is implemented.
+Stress testing is documented for EPIC-07. The dual-oracle k6 + Prisma harness lives under `tests/stress/`; scenario results and environment limits are summarized in [Stress testing results](stress-testing.md); constraint analysis is in [Bottleneck analysis](stress/bottlenecks.md). Stress remains outside the required PR automated suite today — CI integration and expanded operational runbooks remain [Issue #71](https://github.com/rexescario-dev/flash-sale-system/issues/71).
 
 ## CI mapping
 
@@ -106,7 +106,7 @@ At a conceptual level, automated validation covers:
 - **Integration tests** — validate behavior against real infrastructure.
 - **Playwright smoke** — provides rapid end-to-end confidence.
 - **Full Playwright regression** — validates broader user journeys.
-- **Stress testing** — not part of the automated suite today (Issue #71).
+- **Stress testing** — documented locally ([results](stress-testing.md)); not part of the required PR automated suite today (Issue #71 for CI/runbook).
 
 This mapping describes layer participation, not workflow YAML, job names, or branch-protection policy.
 
@@ -116,9 +116,11 @@ This mapping describes layer participation, not workflow YAML, job names, or bra
 - [Local development](local-development.md)
 - [Playwright E2E](playwright-e2e.md)
 - [Smoke testing](smoke-testing.md)
+- [Stress testing results](stress-testing.md)
+- [Bottleneck analysis](stress/bottlenecks.md)
 - [Concurrency model](concurrency-model.md)
 - [Redis caching & rate-limit strategy](redis-caching-strategy.md)
 
 **Planned work:**
 
-- Issue #71 — Stress testing (k6)
+- Issue #71 — Stress testing CI / runbook discoverability
