@@ -26,15 +26,15 @@
 
 ## File map
 
-| File                                                                                         | Responsibility                                              |
-| -------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| `docs/stress-testing.md`                                                                     | **Create** — canonical results hub (primary deliverable)    |
-| `tests/stress/README.md`                                                                     | Thin link to hub; remove “lands with #60” placeholders      |
-| `docs/testing-strategy.md`                                                                   | Thin Stress section update; CI/automation → #71             |
-| `docs/stress/bottlenecks.md`                                                                 | Optional one-line backlink only; no analysis rewrite        |
-| `docs/superpowers/specs/2026-08-01-issue-60-document-stress-test-results-design.md`          | Approved design                                             |
-| `docs/superpowers/plans/2026-08-01-issue-60-document-stress-test-results.md`                 | This plan                                                   |
-| `tests/stress/results/<scenario>-<profile>/`                                                 | **Local only / gitignored** — optional fresh evidence       |
+| File                                                                                | Responsibility                                           |
+| ----------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `docs/stress-testing.md`                                                            | **Create** — canonical results hub (primary deliverable) |
+| `tests/stress/README.md`                                                            | Thin link to hub; remove “lands with #60” placeholders   |
+| `docs/testing-strategy.md`                                                          | Thin Stress section update; CI/automation → #71          |
+| `docs/stress/bottlenecks.md`                                                        | Optional one-line backlink only; no analysis rewrite     |
+| `docs/superpowers/specs/2026-08-01-issue-60-document-stress-test-results-design.md` | Approved design                                          |
+| `docs/superpowers/plans/2026-08-01-issue-60-document-stress-test-results.md`        | This plan                                                |
+| `tests/stress/results/<scenario>-<profile>/`                                        | **Local only / gitignored** — optional fresh evidence    |
 
 **Frozen artifacts / contracts:** `#54`–`#59` scenario behavior, reporter/verifier contracts, artifact layout, metrics schema, stock policy, app/e2e/CI code, `#71` scope, `#134` CSS AC.
 
@@ -43,8 +43,8 @@
 | Scenario         | Profile | Actual summary (do not invent beyond this / fresh artifacts)                                                                                                                                 |
 | ---------------- | ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `purchase-load`  | `smoke` | 100 successes; 0 rate-limited; verifier `ok: true`                                                                                                                                           |
-| `oversell`       | `smoke` | 100 attempts; 10 success; 90 sold-out; 0 rate-limited; stock 10; unused 0; `oversell: false`; `accountingOk: true`; verifier purchase count 10 / remaining 0                                   |
-| `duplicate-race` | `smoke` | 100 attempts; 1 success; 99 duplicate; 0 rate-limited/sold-out/unexpected; stock 10; unused 9; verifier fixed-user purchase count 1                                                           |
+| `oversell`       | `smoke` | 100 attempts; 10 success; 90 sold-out; 0 rate-limited; stock 10; unused 0; `oversell: false`; `accountingOk: true`; verifier purchase count 10 / remaining 0                                 |
+| `duplicate-race` | `smoke` | 100 attempts; 1 success; 99 duplicate; 0 rate-limited/sold-out/unexpected; stock 10; unused 9; verifier fixed-user purchase count 1                                                          |
 | `high-volume`    | `full`  | 10_000 attempts; 30 success; 9_970 rate-limited; 0 sold-out/duplicate/unexpected; stock 12_000; verifier purchase count 30 / remaining 11_970; p50≈35.0ms p95≈49.8ms p99≈81.3ms; ~2397.5 RPS |
 
 ---
@@ -157,35 +157,35 @@ Do not invent metrics. Every Actual value below is traceable to fresh `#58` arti
 
 EPIC-07 is a dual-oracle validation layer over purchase-flow concurrency guarantees: k6 classifies GraphQL `purchaseItem` responses; a Prisma verifier asserts persisted invariants. Intensity profiles are `smoke` / `standard` / `full`. Correctness scenarios (#54–#56) use a raised API limiter; high-volume (#57) uses a production-like performance limiter.
 
-| Document | Purpose |
-| --- | --- |
-| This hub (`docs/stress-testing.md`) | Results overview and expected vs actual |
+| Document                                            | Purpose                                   |
+| --------------------------------------------------- | ----------------------------------------- |
+| This hub (`docs/stress-testing.md`)                 | Results overview and expected vs actual   |
 | [docs/stress/bottlenecks.md](stress/bottlenecks.md) | Evidence-backed bottleneck analysis (#59) |
-| [tests/stress/README.md](../tests/stress/README.md) | Harness usage and commands |
-| [docs/testing-strategy.md](testing-strategy.md) | Where stress fits in the testing pyramid |
+| [tests/stress/README.md](../tests/stress/README.md) | Harness usage and commands                |
+| [docs/testing-strategy.md](testing-strategy.md)     | Where stress fits in the testing pyramid  |
 
 ## Scenario matrix
 
 Inventory of runnable scenarios (not results):
 
-| Scenario | Purpose | Profile(s) | Limiter |
-| --- | --- | --- | --- |
-| `purchase-load` | Baseline concurrent purchase load | `smoke`, `standard`, `full` | correctness |
-| `oversell` | Limited inventory / no oversell | `smoke`, `standard`, `full` | correctness |
-| `duplicate-race` | Same-user uniqueness under concurrency | `smoke`, `standard`, `full` | correctness |
-| `high-volume` | Capacity / latency observation under load | `smoke`, `standard`, `full` | performance |
-| `harness-smoke` | Harness wiring proof only | `smoke` | correctness |
+| Scenario         | Purpose                                   | Profile(s)                  | Limiter     |
+| ---------------- | ----------------------------------------- | --------------------------- | ----------- |
+| `purchase-load`  | Baseline concurrent purchase load         | `smoke`, `standard`, `full` | correctness |
+| `oversell`       | Limited inventory / no oversell           | `smoke`, `standard`, `full` | correctness |
+| `duplicate-race` | Same-user uniqueness under concurrency    | `smoke`, `standard`, `full` | correctness |
+| `high-volume`    | Capacity / latency observation under load | `smoke`, `standard`, `full` | performance |
+| `harness-smoke`  | Harness wiring proof only                 | `smoke`                     | correctness |
 
 `harness-smoke` is operational proof for the seed→run→verify pipeline; it is not part of the expected-vs-actual results table below.
 
 ## Expected vs actual results
 
-| Scenario | Profile | Expected | Actual | Evidence |
-| --- | --- | --- | --- | --- |
-| `purchase-load` | `smoke` | Completes under correctness limiter without classification/invariant violations (`RATE_LIMITED` / unexpected = 0; successes match attempts for comfortable stock) | 100 successes; 0 rate-limited; verifier `ok: true` | Prior-run (#59) |
-| `oversell` | `smoke` | Successes ≤ stock; no oversell; stock identity holds | 100 attempts → 10 success, 90 sold-out, 0 rate-limited; stock 10 exhausted; verifier purchase count 10 / remaining 0 | Prior-run (#59) |
-| `duplicate-race` | `smoke` | Exactly one successful purchase for the fixed user; remainder duplicate | 100 attempts → 1 success, 99 duplicate; verifier fixed-user purchase count 1 | Prior-run (#59) |
-| `high-volume` | `full` | Inventory/uniqueness invariants hold; `RATE_LIMITED` observational (not a hard fail) | 10_000 attempts → 30 success, 9_970 rate-limited; verifier purchase count 30 / remaining 11_970; p50≈35ms p95≈50ms p99≈81ms; ~2397 RPS | Prior-run (#59) |
+| Scenario         | Profile | Expected                                                                                                                                                          | Actual                                                                                                                                 | Evidence        |
+| ---------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | --------------- |
+| `purchase-load`  | `smoke` | Completes under correctness limiter without classification/invariant violations (`RATE_LIMITED` / unexpected = 0; successes match attempts for comfortable stock) | 100 successes; 0 rate-limited; verifier `ok: true`                                                                                     | Prior-run (#59) |
+| `oversell`       | `smoke` | Successes ≤ stock; no oversell; stock identity holds                                                                                                              | 100 attempts → 10 success, 90 sold-out, 0 rate-limited; stock 10 exhausted; verifier purchase count 10 / remaining 0                   | Prior-run (#59) |
+| `duplicate-race` | `smoke` | Exactly one successful purchase for the fixed user; remainder duplicate                                                                                           | 100 attempts → 1 success, 99 duplicate; verifier fixed-user purchase count 1                                                           | Prior-run (#59) |
+| `high-volume`    | `full`  | Inventory/uniqueness invariants hold; `RATE_LIMITED` observational (not a hard fail)                                                                              | 10_000 attempts → 30 success, 9_970 rate-limited; verifier purchase count 30 / remaining 11_970; p50≈35ms p95≈50ms p99≈81ms; ~2397 RPS | Prior-run (#59) |
 
 If a row was regenerated locally during this issue, replace Actual with the fresh summary and set Evidence to `Fresh run`.
 

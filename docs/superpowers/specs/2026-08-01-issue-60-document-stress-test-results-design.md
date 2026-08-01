@@ -31,37 +31,37 @@ Satisfied when:
 
 **Single results hub at `docs/stress-testing.md` (Approach 1):**
 
-| Surface                                                   | Role after #60                                                          |
-| --------------------------------------------------------- | ----------------------------------------------------------------------- |
-| `docs/stress-testing.md`                                  | Canonical results hub / overview (primary AC deliverable)               |
-| `docs/stress/bottlenecks.md`                              | Unchanged constraint analysis from #59 — linked, not relocated          |
-| `tests/stress/README.md`                                  | Operational harness usage; thin pointer to the hub                      |
-| `docs/testing-strategy.md`                                | High-level strategy with thin links; CI/runbook deferred to #71         |
-| Fresh artifacts or prior-run evidence from #59            | Evidence sources for Actual cells                                       |
+| Surface                                        | Role after #60                                                  |
+| ---------------------------------------------- | --------------------------------------------------------------- |
+| `docs/stress-testing.md`                       | Canonical results hub / overview (primary AC deliverable)       |
+| `docs/stress/bottlenecks.md`                   | Unchanged constraint analysis from #59 — linked, not relocated  |
+| `tests/stress/README.md`                       | Operational harness usage; thin pointer to the hub              |
+| `docs/testing-strategy.md`                     | High-level strategy with thin links; CI/runbook deferred to #71 |
+| Fresh artifacts or prior-run evidence from #59 | Evidence sources for Actual cells                               |
 
 **Rejected alternatives:**
 
-| Alternative                                         | Why rejected                                                                 |
-| --------------------------------------------------- | ---------------------------------------------------------------------------- |
-| Split hub under `docs/stress/results.md` + index    | Extra hop; less discoverable than EPIC-preferred `docs/stress-testing.md`    |
-| Fat `tests/stress/README.md` as narrative hub       | Conflates ops with project-level reporting; breaks thin-README pattern       |
-| Mandatory re-run of all scenarios for DoD           | Couples docs issue to stack availability; #59 already produced evidence      |
-| Full profile×scenario sparse results grid           | Noise of “Not run” cells without evidence quality                            |
-| Broader `testing-strategy.md` rewrite / #71 runbook | Out of issue boundary                                                        |
+| Alternative                                         | Why rejected                                                              |
+| --------------------------------------------------- | ------------------------------------------------------------------------- |
+| Split hub under `docs/stress/results.md` + index    | Extra hop; less discoverable than EPIC-preferred `docs/stress-testing.md` |
+| Fat `tests/stress/README.md` as narrative hub       | Conflates ops with project-level reporting; breaks thin-README pattern    |
+| Mandatory re-run of all scenarios for DoD           | Couples docs issue to stack availability; #59 already produced evidence   |
+| Full profile×scenario sparse results grid           | Noise of “Not run” cells without evidence quality                         |
+| Broader `testing-strategy.md` rewrite / #71 runbook | Out of issue boundary                                                     |
 
 ## Locked decisions
 
-| Area                 | Decision                                                                                                      |
-| -------------------- | ------------------------------------------------------------------------------------------------------------- |
-| Approach             | Single hub at `docs/stress-testing.md`                                                                        |
-| Evidence DoD         | Prefer fresh artifacts when regenerable; else cite `docs/stress/bottlenecks.md` as **prior-run evidence**     |
-| Evidence labeling    | Per-row **Evidence** column: `Fresh run` or `Prior-run (#59)`; fresh and prior-run may be mixed                |
-| Scenario Results     | Only evidence-backed scenarios receive documented expected-vs-actual results (#59 matrix)                     |
-| Other profiles       | Brief inventory note; no metrics without corresponding artifacts                                              |
-| `testing-strategy.md`| Thin discoverability update; CI/automation remains #71                                                        |
-| README               | Thin pointer to hub; remain operational and concise                                                           |
-| Freeze               | `#54`–`#59` reporting formats, artifact layout, metrics contracts, and analysis remain unchanged              |
-| Out of slice         | Mandatory full re-run; `#71` runbook/CI; new tooling; invented numbers; committed gitignored artifacts; `#134` |
+| Area                  | Decision                                                                                                       |
+| --------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Approach              | Single hub at `docs/stress-testing.md`                                                                         |
+| Evidence DoD          | Prefer fresh artifacts when regenerable; else cite `docs/stress/bottlenecks.md` as **prior-run evidence**      |
+| Evidence labeling     | Per-row **Evidence** column: `Fresh run` or `Prior-run (#59)`; fresh and prior-run may be mixed                |
+| Scenario Results      | Only evidence-backed scenarios receive documented expected-vs-actual results (#59 matrix)                      |
+| Other profiles        | Brief inventory note; no metrics without corresponding artifacts                                               |
+| `testing-strategy.md` | Thin discoverability update; CI/automation remains #71                                                         |
+| README                | Thin pointer to hub; remain operational and concise                                                            |
+| Freeze                | `#54`–`#59` reporting formats, artifact layout, metrics contracts, and analysis remain unchanged               |
+| Out of slice          | Mandatory full re-run; `#71` runbook/CI; new tooling; invented numbers; committed gitignored artifacts; `#134` |
 
 ## Hub content contract
 
@@ -69,15 +69,15 @@ Canonical file: `docs/stress-testing.md`
 
 ### Section outline
 
-| # | Section                    | Role                                                                                          |
-| - | -------------------------- | --------------------------------------------------------------------------------------------- |
-| 1 | Overview                   | Dual-oracle stress layer; hub vs bottlenecks vs README vs testing-strategy; no invented metrics |
-| 2 | Scenario matrix            | **Inventory** (not results): Scenario, Purpose, Profile(s), Limiter                           |
-| 3 | Expected vs actual results | Evidence-backed summary rows only                                                             |
-| 4 | Other supported profiles   | Supported combinations without quantitative claims unless artifacts exist                     |
-| 5 | Environment limitations    | Runner, limiter, stack, environment-dependence, CI stance                                     |
-| 6 | Reproducing the results    | Brief commands + link to README                                                               |
-| 7 | Related documentation      | Reader-workflow ordered links                                                                 |
+| #   | Section                    | Role                                                                                            |
+| --- | -------------------------- | ----------------------------------------------------------------------------------------------- |
+| 1   | Overview                   | Dual-oracle stress layer; hub vs bottlenecks vs README vs testing-strategy; no invented metrics |
+| 2   | Scenario matrix            | **Inventory** (not results): Scenario, Purpose, Profile(s), Limiter                             |
+| 3   | Expected vs actual results | Evidence-backed summary rows only                                                               |
+| 4   | Other supported profiles   | Supported combinations without quantitative claims unless artifacts exist                       |
+| 5   | Environment limitations    | Runner, limiter, stack, environment-dependence, CI stance                                       |
+| 6   | Reproducing the results    | Brief commands + link to README                                                                 |
+| 7   | Related documentation      | Reader-workflow ordered links                                                                   |
 
 ### Section 2 — Scenario matrix (inventory)
 
@@ -92,13 +92,13 @@ Keep this distinct from Section 3. Optionally note `harness-smoke` as harness-on
 
 ### Section 3 — Expected vs actual
 
-| Column    | Rule                                                                                                                                     |
-| --------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| Scenario  | One of the four evidence rows                                                                                                            |
-| Profile   | Evidence profile (`smoke` for correctness trio; `full` for high-volume)                                                                  |
-| Expected  | Scenario acceptance criteria / invariant — not a specific numeric threshold unless the scenario defines one                              |
-| Actual    | Evidence-backed summary from `k6-summary.json`, `verifier.json`, or `docs/stress/bottlenecks.md`; avoid reproducing full metric dumps    |
-| Evidence  | `Fresh run` or `Prior-run (#59)`                                                                                                         |
+| Column   | Rule                                                                                                                                  |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| Scenario | One of the four evidence rows                                                                                                         |
+| Profile  | Evidence profile (`smoke` for correctness trio; `full` for high-volume)                                                               |
+| Expected | Scenario acceptance criteria / invariant — not a specific numeric threshold unless the scenario defines one                           |
+| Actual   | Evidence-backed summary from `k6-summary.json`, `verifier.json`, or `docs/stress/bottlenecks.md`; avoid reproducing full metric dumps |
+| Evidence | `Fresh run` or `Prior-run (#59)`                                                                                                      |
 
 **Evidence-backed expected-vs-actual rows (fixed contract):**
 
@@ -166,14 +166,14 @@ pnpm stress:test -- --scenario high-volume --profile full
 
 ## File map
 
-| Path                                                                           | Change                                                                                                           |
-| ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------- |
-| `docs/stress-testing.md`                                                       | **Create** — canonical hub                                                                                       |
-| `tests/stress/README.md`                                                       | Thin link to hub; remove “lands with #60” placeholders                                                           |
-| `docs/testing-strategy.md`                                                     | Thin Stress update: documented + links to hub/bottlenecks; CI/automation → #71                                   |
-| `docs/superpowers/specs/2026-08-01-issue-60-document-stress-test-results-design.md` | This design                                                                                                  |
-| `docs/superpowers/plans/2026-08-01-issue-60-document-stress-test-results.md`   | Implementation plan                                                                                              |
-| `docs/stress/bottlenecks.md`                                                   | No content changes required; optional backlink to the hub if it improves navigation without duplicating content  |
+| Path                                                                                | Change                                                                                                          |
+| ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `docs/stress-testing.md`                                                            | **Create** — canonical hub                                                                                      |
+| `tests/stress/README.md`                                                            | Thin link to hub; remove “lands with #60” placeholders                                                          |
+| `docs/testing-strategy.md`                                                          | Thin Stress update: documented + links to hub/bottlenecks; CI/automation → #71                                  |
+| `docs/superpowers/specs/2026-08-01-issue-60-document-stress-test-results-design.md` | This design                                                                                                     |
+| `docs/superpowers/plans/2026-08-01-issue-60-document-stress-test-results.md`        | Implementation plan                                                                                             |
+| `docs/stress/bottlenecks.md`                                                        | No content changes required; optional backlink to the hub if it improves navigation without duplicating content |
 
 ## Frozen artifacts / contracts
 
@@ -226,11 +226,11 @@ Verification checklist:
 
 ## Relationship to adjacent issues
 
-| Issue | How #60 relates without overlapping                                      |
-| ----- | ------------------------------------------------------------------------ |
-| #58   | Consumes canonical artifacts; does not change emission                   |
-| #59   | Consumes / cites bottleneck analysis; does not relocate or rewrite it    |
-| #71   | EPIC-08 runbook / CI discoverability after stress results hub exists     |
+| Issue | How #60 relates without overlapping                                   |
+| ----- | --------------------------------------------------------------------- |
+| #58   | Consumes canonical artifacts; does not change emission                |
+| #59   | Consumes / cites bottleneck analysis; does not relocate or rewrite it |
+| #71   | EPIC-08 runbook / CI discoverability after stress results hub exists  |
 
 ## Spec self-review checklist
 
@@ -242,4 +242,4 @@ Verification checklist:
 6. `#54`–`#59` freeze explicit; artifacts remain gitignored.
 7. `testing-strategy.md` thin-link only; CI deferred to #71.
 8. No `#134` CSS AC reopen.
-)
+   )
