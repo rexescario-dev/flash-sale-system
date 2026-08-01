@@ -3,6 +3,6 @@ export interface HealthCheckResult {
 }
 
 export interface HealthCheck {
-  readonly name: string;
   check(): Promise<HealthCheckResult>;
+  readonly name: string;
 }
