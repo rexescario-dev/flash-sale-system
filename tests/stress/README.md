@@ -86,7 +86,7 @@ Canonical summary fields: metadata, counters, `performance` (p50/p95/p99 + `http
 pnpm stress:report -- --scenario oversell --profile smoke
 ```
 
-Do not commit generated artifacts. Results narrative hub lands with #60.
+Do not commit generated artifacts. Results hub: [docs/stress-testing.md](../../docs/stress-testing.md).
 
 ### Harness smoke
 
@@ -102,7 +102,7 @@ Leftover stock on `duplicate-race` is expected (no exhaustion warning); correctn
 ## Bottleneck analysis
 
 Evidence-backed constraint analysis: [docs/stress/bottlenecks.md](../../docs/stress/bottlenecks.md).
-Results narrative hub lands with #60.
+Results hub: [docs/stress-testing.md](../../docs/stress-testing.md).
 
 ## Design
 
@@ -113,4 +113,5 @@ See [EPIC-07 design spec](../../docs/superpowers/specs/2026-07-31-epic-07-perfor
 [#57 design](../../docs/superpowers/specs/2026-07-31-issue-57-high-volume-api-test-design.md),
 [#58 design](../../docs/superpowers/specs/2026-07-31-issue-58-capture-stress-test-metrics-design.md),
 and [#59 design](../../docs/superpowers/specs/2026-07-31-issue-59-analyze-stress-test-bottlenecks-design.md).
-Results narrative hub lands with #60.
+Results hub: [docs/stress-testing.md](../../docs/stress-testing.md).
+[#60 design](../../docs/superpowers/specs/2026-08-01-issue-60-document-stress-test-results-design.md).
