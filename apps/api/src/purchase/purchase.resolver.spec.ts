@@ -15,10 +15,12 @@ import { ConfigService } from '@nestjs/config';
 import type { AppEnv } from '../config/env.validation';
 import type { FlashSaleQueryCache } from '../flash-sale/flash-sale-query.cache';
 import type { Clock } from '../graphql/clock';
+import type { AppLogger } from '../logging/app-logger';
 import type { MyPurchaseQueryCache } from './my-purchase-query.cache';
 import type { PurchaseItemRateLimiter } from './purchase-item.rate-limiter';
 
 import { GraphqlRateLimitedError } from '../graphql/graphql-rate-limited.error';
+import { LogEvent } from '../logging/log-event';
 import { PurchaseResolver } from './purchase.resolver';
 
 const mockReq = {
@@ -33,6 +35,15 @@ function stubPurchaseHistoryQuery(
     findByUser: jest.fn().mockResolvedValue([]),
     ...partial,
   } as PurchaseHistoryQuery;
+}
+
+function stubAppLogger(): AppLogger {
+  return {
+    debug: jest.fn(),
+    error: jest.fn(),
+    info: jest.fn(),
+    warn: jest.fn(),
+  } as unknown as AppLogger;
 }
 
 const sharedClock: Clock = { nowUtc: () => new Date('2026-07-28T12:00:00.000Z') };
@@ -51,17 +62,22 @@ function build(
   const rateLimiter = {
     consume: jest.fn().mockResolvedValue('allow'),
   } as unknown as PurchaseItemRateLimiter;
+  const appLogger = stubAppLogger();
 
-  return new PurchaseResolver(
-    flashSales as FlashSaleRepository,
-    flow as PurchaseFlow,
-    clock,
-    config,
-    { invalidate: jest.fn() } as unknown as FlashSaleQueryCache,
-    cache as MyPurchaseQueryCache,
-    rateLimiter,
-    stubPurchaseHistoryQuery(history),
-  );
+  return {
+    appLogger,
+    resolver: new PurchaseResolver(
+      flashSales as FlashSaleRepository,
+      flow as PurchaseFlow,
+      clock,
+      config,
+      { invalidate: jest.fn() } as unknown as FlashSaleQueryCache,
+      cache as MyPurchaseQueryCache,
+      rateLimiter,
+      stubPurchaseHistoryQuery(history),
+      appLogger,
+    ),
+  };
 }
 
 describe('PurchaseResolver.myPurchase', () => {
@@ -77,7 +93,7 @@ describe('PurchaseResolver.myPurchase', () => {
   it('sale missing → findById called, cache.get NOT called, FlashSaleNotFoundError', async () => {
     const findById = jest.fn().mockResolvedValue(null);
     const get = jest.fn();
-    const resolver = build({ findById }, { get });
+    const { resolver } = build({ findById }, { get });
 
     await expect(resolver.myPurchase('sale-1', 'user-1')).rejects.toBeInstanceOf(
       FlashSaleNotFoundError,
@@ -93,7 +109,7 @@ describe('PurchaseResolver.myPurchase', () => {
       purchased: false,
       purchasedAt: null,
     });
-    const resolver = build({ findById }, { get });
+    const { resolver } = build({ findById }, { get });
 
     await expect(resolver.myPurchase('sale-1', 'user-1')).resolves.toEqual({
       purchaseId: null,
@@ -111,7 +127,7 @@ describe('PurchaseResolver.myPurchase', () => {
 
   it('returns purchased true from cache when sale exists', async () => {
     const purchasedAt = new Date('2026-07-28T11:00:00.000Z');
-    const resolver = build(
+    const { resolver } = build(
       { findById: jest.fn().mockResolvedValue(sale) },
       {
         get: jest.fn().mockResolvedValue({
@@ -132,7 +148,7 @@ describe('PurchaseResolver.myPurchase', () => {
   it('rejects whitespace-only userId before ports', async () => {
     const findById = jest.fn();
     const get = jest.fn();
-    const resolver = build({ findById }, { get });
+    const { resolver } = build({ findById }, { get });
 
     await expect(resolver.myPurchase('sale-1', '   ')).rejects.toMatchObject({
       code: 'BAD_USER_INPUT',
@@ -144,7 +160,7 @@ describe('PurchaseResolver.myPurchase', () => {
   it('rejects whitespace-only flashSaleId before ports', async () => {
     const findById = jest.fn();
     const get = jest.fn();
-    const resolver = build({ findById }, { get });
+    const { resolver } = build({ findById }, { get });
 
     await expect(resolver.myPurchase('   ', 'user-1')).rejects.toMatchObject({
       code: 'BAD_USER_INPUT',
@@ -158,7 +174,7 @@ describe('PurchaseResolver.myPurchase', () => {
     async (raw) => {
       const findById = jest.fn();
       const get = jest.fn();
-      const resolver = build({ findById }, { get });
+      const { resolver } = build({ findById }, { get });
 
       await expect(resolver.myPurchase(raw, 'user-1')).rejects.toMatchObject({
         code: 'BAD_USER_INPUT',
@@ -173,7 +189,7 @@ describe('PurchaseResolver.myPurchase', () => {
     async (raw) => {
       const findById = jest.fn();
       const get = jest.fn();
-      const resolver = build({ findById }, { get });
+      const { resolver } = build({ findById }, { get });
 
       await expect(resolver.myPurchase('sale-1', raw)).rejects.toMatchObject({
         code: 'BAD_USER_INPUT',
@@ -182,6 +198,27 @@ describe('PurchaseResolver.myPurchase', () => {
       expect(get).not.toHaveBeenCalled();
     },
   );
+
+  it('myPurchase emits purchase.query.completed with resultCount 0|1', async () => {
+    const findById = jest.fn().mockResolvedValue(sale);
+    const get = jest.fn().mockResolvedValue({
+      purchaseId: null,
+      purchased: false,
+      purchasedAt: null,
+    });
+    const { appLogger, resolver } = build({ findById }, { get });
+
+    await resolver.myPurchase('sale-1', 'user-1');
+
+    expect(appLogger.info).toHaveBeenCalledWith(
+      LogEvent.PURCHASE_QUERY_COMPLETED,
+      expect.objectContaining({
+        userId: 'user-1',
+        durationMs: expect.any(Number),
+        resultCount: 0,
+      }),
+    );
+  });
 });
 
 describe('PurchaseResolver.myPurchases', () => {
@@ -189,7 +226,7 @@ describe('PurchaseResolver.myPurchases', () => {
     'rejects whitespace-only userId %j before history port',
     async (raw) => {
       const findByUser = jest.fn();
-      const resolver = build({}, {}, {}, { findByUser });
+      const { resolver } = build({}, {}, {}, { findByUser });
 
       await expect(resolver.myPurchases(raw)).rejects.toMatchObject({
         code: 'BAD_USER_INPUT',
@@ -212,7 +249,7 @@ describe('PurchaseResolver.myPurchases', () => {
         purchasedAt,
       },
     ]);
-    const resolver = build({}, {}, {}, { findByUser });
+    const { resolver } = build({}, {}, {}, { findByUser });
 
     await expect(resolver.myPurchases('user-1')).resolves.toEqual([
       {
@@ -232,11 +269,38 @@ describe('PurchaseResolver.myPurchases', () => {
 
   it('returns [] when history port returns []', async () => {
     const findByUser = jest.fn().mockResolvedValue([]);
-    const resolver = build({}, {}, {}, { findByUser });
+    const { resolver } = build({}, {}, {}, { findByUser });
 
     await expect(resolver.myPurchases('user-1')).resolves.toEqual([]);
     expect(findByUser).toHaveBeenCalledTimes(1);
     expect(findByUser).toHaveBeenCalledWith('user-1' as UserId);
+  });
+
+  it('myPurchases emits purchase.query.completed without operationName', async () => {
+    const findByUser = jest.fn().mockResolvedValue([
+      {
+        flashSaleId: 'sale-1',
+        id: 'purchase-1',
+        product: { id: 'p1', description: 'd', name: 'n' },
+        purchasedAt: new Date('2026-07-28T11:00:00.000Z'),
+      },
+    ]);
+    const { appLogger, resolver } = build({}, {}, {}, { findByUser });
+
+    await resolver.myPurchases('user-1');
+
+    expect(appLogger.info).toHaveBeenCalledWith(
+      LogEvent.PURCHASE_QUERY_COMPLETED,
+      expect.objectContaining({
+        userId: 'user-1',
+        durationMs: expect.any(Number),
+        resultCount: 1,
+      }),
+    );
+    const fields = (appLogger.info as jest.Mock).mock.calls.find(
+      (c) => c[0] === LogEvent.PURCHASE_QUERY_COMPLETED,
+    )?.[1] as Record<string, unknown>;
+    expect(fields).not.toHaveProperty('operationName');
   });
 });
 
@@ -263,8 +327,10 @@ describe('PurchaseResolver.purchaseItem', () => {
     const config = {
       get: jest.fn().mockReturnValue(rateLimit.trustedProxy ?? false),
     } as unknown as ConfigService<AppEnv, true>;
+    const appLogger = stubAppLogger();
 
     return {
+      appLogger,
       consume,
       flashSaleInvalidate,
       myPurchaseInvalidate,
@@ -280,6 +346,7 @@ describe('PurchaseResolver.purchaseItem', () => {
         } as unknown as MyPurchaseQueryCache,
         { consume } as unknown as PurchaseItemRateLimiter,
         stubPurchaseHistoryQuery(),
+        appLogger,
       ),
     };
   }
@@ -456,5 +523,112 @@ describe('PurchaseResolver.purchaseItem', () => {
     });
     expect(flashSaleInvalidate).toHaveBeenCalled();
     expect(myPurchaseInvalidate).toHaveBeenCalled();
+  });
+
+  it('emits purchase.attempted then purchase.completed on SUCCESS', async () => {
+    const execute = jest.fn().mockResolvedValue('SUCCESS');
+    const { appLogger, resolver } = build({ execute });
+
+    const result = await resolver.purchaseItem('sale-1', 'user-1', mockReq);
+
+    expect(appLogger.info).toHaveBeenCalledWith(
+      LogEvent.PURCHASE_ATTEMPTED,
+      expect.objectContaining({ flashSaleId: 'sale-1', userId: 'user-1' }),
+    );
+    expect(appLogger.info).toHaveBeenCalledWith(
+      LogEvent.PURCHASE_COMPLETED,
+      expect.objectContaining({
+        flashSaleId: 'sale-1',
+        purchaseId: result.purchaseId,
+        userId: 'user-1',
+        durationMs: expect.any(Number),
+      }),
+    );
+    expect(appLogger.error).not.toHaveBeenCalledWith(
+      LogEvent.PURCHASE_FAILED,
+      expect.anything(),
+      expect.anything(),
+    );
+  });
+
+  it.each([
+    ['ALREADY_PURCHASED', LogEvent.PURCHASE_DUPLICATE],
+    ['SOLD_OUT', LogEvent.PURCHASE_SOLD_OUT],
+    ['SALE_NOT_STARTED', LogEvent.PURCHASE_SALE_NOT_STARTED],
+    ['SALE_ENDED', LogEvent.PURCHASE_SALE_ENDED],
+  ] as const)('emits %s outcome event without purchase.failed', async (outcome, event) => {
+    const { appLogger, resolver } = build({
+      execute: jest.fn().mockResolvedValue(outcome),
+    });
+
+    await resolver.purchaseItem('sale-1', 'user-1', mockReq);
+
+    expect(appLogger.info).toHaveBeenCalledWith(
+      event,
+      expect.objectContaining({
+        flashSaleId: 'sale-1',
+        userId: 'user-1',
+        durationMs: expect.any(Number),
+      }),
+    );
+    expect(appLogger.error).not.toHaveBeenCalled();
+  });
+
+  it('emits purchase.rate_limited and not purchase.failed when rate limited', async () => {
+    const execute = jest.fn();
+    const consume = jest.fn().mockResolvedValue('limit');
+    const { appLogger, resolver } = build({ execute }, {}, { consume });
+
+    await expect(resolver.purchaseItem('sale-1', 'user-1', mockReq)).rejects.toBeInstanceOf(
+      GraphqlRateLimitedError,
+    );
+
+    expect(appLogger.info).toHaveBeenCalledWith(
+      LogEvent.PURCHASE_RATE_LIMITED,
+      expect.objectContaining({
+        flashSaleId: 'sale-1',
+        userId: 'user-1',
+        durationMs: expect.any(Number),
+      }),
+    );
+    expect(appLogger.error).not.toHaveBeenCalled();
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it('emits purchase.failed for unexpected errors and rethrows', async () => {
+    const boom = new Error('db down');
+    const { appLogger, resolver } = build({
+      execute: jest.fn().mockRejectedValue(boom),
+    });
+
+    await expect(resolver.purchaseItem('sale-1', 'user-1', mockReq)).rejects.toThrow('db down');
+
+    expect(appLogger.error).toHaveBeenCalledWith(
+      LogEvent.PURCHASE_FAILED,
+      expect.objectContaining({
+        flashSaleId: 'sale-1',
+        userId: 'user-1',
+        durationMs: expect.any(Number),
+      }),
+      boom,
+    );
+    // mutual exclusion: no expected outcome event
+    expect(appLogger.info).not.toHaveBeenCalledWith(LogEvent.PURCHASE_COMPLETED, expect.anything());
+    expect(appLogger.info).not.toHaveBeenCalledWith(LogEvent.PURCHASE_SOLD_OUT, expect.anything());
+  });
+
+  it('does not emit purchase.failed for FlashSaleNotFoundError', async () => {
+    const { appLogger, resolver } = build({
+      execute: jest.fn().mockRejectedValue(new FlashSaleNotFoundError()),
+    });
+
+    await expect(resolver.purchaseItem('sale-1', 'user-1', mockReq)).rejects.toBeInstanceOf(
+      FlashSaleNotFoundError,
+    );
+    expect(appLogger.error).not.toHaveBeenCalledWith(
+      LogEvent.PURCHASE_FAILED,
+      expect.anything(),
+      expect.anything(),
+    );
   });
 });
