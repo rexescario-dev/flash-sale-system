@@ -7,7 +7,10 @@ import { join } from 'node:path';
 import { validateEnv } from './config/env.validation';
 import { FlashSaleModule } from './flash-sale/flash-sale.module';
 import { GraphqlCommonModule } from './graphql/graphql-common.module';
+import { createGraphqlLoggingPlugin } from './graphql/graphql-logging.plugin';
 import { HealthModule } from './health/health.module';
+import { AppLogger } from './logging/app-logger';
+import { LoggingModule } from './logging/logging.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { PurchaseModule } from './purchase/purchase.module';
 import { RedisModule } from './redis/redis.module';
@@ -27,6 +30,7 @@ const envFilePath = [
     FlashSaleModule,
     GraphqlCommonModule,
     HealthModule,
+    LoggingModule,
     PrismaModule,
     PurchaseModule,
     RedisModule,
@@ -35,11 +39,15 @@ const envFilePath = [
       isGlobal: true,
       validate: validateEnv,
     }),
-    GraphQLModule.forRoot<ApolloDriverConfig>({
-      autoSchemaFile: true,
+    GraphQLModule.forRootAsync<ApolloDriverConfig>({
       driver: ApolloDriver,
-      introspection: process.env.NODE_ENV !== 'production',
-      playground: process.env.NODE_ENV !== 'production',
+      inject: [AppLogger],
+      useFactory: (appLogger: AppLogger) => ({
+        autoSchemaFile: true,
+        introspection: process.env.NODE_ENV !== 'production',
+        playground: process.env.NODE_ENV !== 'production',
+        plugins: [createGraphqlLoggingPlugin(appLogger)],
+      }),
     }),
   ],
 })
